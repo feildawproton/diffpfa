@@ -1,0 +1,47 @@
+from typing import List, Tuple
+import torch
+
+
+def align_and_combine_channels(
+    channel_images: List[torch.Tensor],
+    align_phase: bool = True
+) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+    """
+    Aligns relative phases between multiple sub-channel images of the same polarization pair
+    and coherently combines them.
+
+    Args:
+        channel_images: List of 2D complex image tensors [I_0, I_1, ..., I_{C-1}].
+        align_phase: If True, estimates phase offset relative to reference channel I_0 and aligns.
+
+    Returns:
+        combined_image: 2D complex image tensor of the combined response.
+        aligned_images: List of aligned individual channel image tensors.
+    """
+    if len(channel_images) == 0:
+        raise ValueError("channel_images list cannot be empty.")
+
+    if len(channel_images) == 1:
+        return channel_images[0], channel_images
+
+    ref_img = channel_images[0]
+    aligned_images = [ref_img]
+
+    for c in range(1, len(channel_images)):
+        curr_img = channel_images[c]
+
+        if align_phase:
+            # Cross-correlation peak phase estimation: <ref_img, curr_img*>
+            cross_corr = torch.sum(ref_img * torch.conj(curr_img))
+            delta_phi = torch.angle(cross_corr)
+
+            # Apply phase alignment rotation
+            curr_aligned = curr_img * torch.exp(1j * delta_phi)
+        else:
+            curr_aligned = curr_img
+
+        aligned_images.append(curr_aligned)
+
+    # Coherent summation across channels
+    combined_image = torch.stack(aligned_images, dim=0).sum(dim=0)
+    return combined_image, aligned_images
