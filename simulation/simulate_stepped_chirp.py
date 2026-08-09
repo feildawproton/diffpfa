@@ -7,9 +7,8 @@ import matplotlib.pyplot as plt
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from diffpfa.algo.pfa_engine import PFAEngine, PFAConfig
+from diffpfa.constants import SPEED_OF_LIGHT
 from diffpfa.io.base import BaseCPHDReader, CPHDMetadata, CPHDChannelData, BaseSICDWriter, SICDImagePayload
-
-SPEED_OF_LIGHT = 299792458.0
 
 class MockSteppedChirpCPHDReader(BaseCPHDReader):
     def __init__(self):
@@ -73,7 +72,8 @@ class MockSteppedChirpCPHDReader(BaseCPHDReader):
             arp_pos_coa=self.arp_pos_coa,
             arp_vel_coa=self.arp_vel_coa,
             line_spacing=0.1,
-            sample_spacing=0.1
+            sample_spacing=0.1,
+            classification="UNCLASSIFIED"
         )
         
     def get_channel_names(self):
@@ -122,7 +122,7 @@ class MockSteppedChirpCPHDReader(BaseCPHDReader):
 class TrackingSICDWriter(BaseSICDWriter):
     def __init__(self):
         from diffpfa.io import SICDWriter
-        self.real_writer = SICDWriter(backend="sarpy")
+        self.real_writer = SICDWriter(backend="sarkit")
         self.payloads = []
         
     def write_sicd(self, output_path: str, payload: SICDImagePayload, cphd_meta: CPHDMetadata) -> str:
@@ -140,7 +140,7 @@ def run_simulation():
     
     device = "cuda" if torch.cuda.is_available() else "cpu"
     config = PFAConfig(
-        mode="czt",
+        mode="cztnufft",
         device=device,
         num_subpatches=1,
         align_subchannels=True,
@@ -153,61 +153,76 @@ def run_simulation():
     
     vv_combined = next(p for p in writer.payloads if p.tx_pol == "V" and p.rcv_pol == "V" and p.channel_id is None)
     vv_ch1 = next(p for p in writer.payloads if p.channel_id == "Ch1_VV_Low")
+    vh_combined = next(p for p in writer.payloads if p.tx_pol == "V" and p.rcv_pol == "H" and p.channel_id is None)
+    vh_ch2 = next(p for p in writer.payloads if p.channel_id == "Ch2_VH_Low")
     
-    img_combined = torch.abs(vv_combined.complex_image).cpu().numpy()
-    img_single = torch.abs(vv_ch1.complex_image).cpu().numpy()
+    img_combined_vv = torch.abs(vv_combined.complex_image).cpu().numpy()
+    img_single_vv = torch.abs(vv_ch1.complex_image).cpu().numpy()
+    img_combined_vh = torch.abs(vh_combined.complex_image).cpu().numpy()
+    img_single_vh = torch.abs(vh_ch2.complex_image).cpu().numpy()
     
-    center_u = img_combined.shape[0] // 2
-    slice_combined = img_combined[center_u, :]
-    slice_single = img_single[center_u, :]
+    center_u = img_combined_vv.shape[0] // 2
+    slice_combined_vv = img_combined_vv[center_u, :]
+    slice_single_vv = img_single_vv[center_u, :]
+    slice_combined_vh = img_combined_vh[center_u, :]
+    slice_single_vh = img_single_vh[center_u, :]
     
-    slice_combined /= slice_combined.max()
-    slice_single /= slice_single.max()
+    slice_combined_vv /= slice_combined_vv.max()
+    slice_single_vv /= slice_single_vv.max()
+    slice_combined_vh /= slice_combined_vh.max()
+    slice_single_vh /= slice_single_vh.max()
     
     # Zoom in around the peak
-    center_r_s = np.argmax(slice_single)
-    center_r_c = np.argmax(slice_combined)
+    center_r_s_vv = np.argmax(slice_single_vv)
+    center_r_c_vv = np.argmax(slice_combined_vv)
+    center_r_s_vh = np.argmax(slice_single_vh)
+    center_r_c_vh = np.argmax(slice_combined_vh)
     window = 10
     
-    zoom_single = slice_single[center_r_s - window : center_r_s + window + 1]
-    zoom_combined = slice_combined[center_r_c - window : center_r_c + window + 1]
+    zoom_single_vv = slice_single_vv[center_r_s_vv - window : center_r_s_vv + window + 1]
+    zoom_combined_vv = slice_combined_vv[center_r_c_vv - window : center_r_c_vv + window + 1]
+    zoom_single_vh = slice_single_vh[center_r_s_vh - window : center_r_s_vh + window + 1]
+    zoom_combined_vh = slice_combined_vh[center_r_c_vh - window : center_r_c_vh + window + 1]
     
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6), sharey=True)
     
-    ax1.plot(range(-window, window + 1), zoom_single, color='blue', marker='o')
-    ax1.set_title('Single Channel (250 MHz) - Zoomed')
+    ax1.plot(range(-window, window + 1), zoom_single_vv, color='blue', marker='o')
+    ax1.set_title('VV Single Channel (250 MHz) - Zoomed')
     ax1.set_xlabel('Relative Range Bin')
     ax1.set_ylabel('Normalized Magnitude')
     ax1.grid(True)
     
-    ax2.plot(range(-window, window + 1), zoom_combined, color='red', marker='o')
-    ax2.set_title('Combined (500 MHz) - Zoomed')
+    ax2.plot(range(-window, window + 1), zoom_combined_vv, color='red', marker='x')
+    ax2.set_title('VV Combined Channels (500 MHz) - Zoomed')
     ax2.set_xlabel('Relative Range Bin')
     ax2.grid(True)
     
     plt.tight_layout()
-    plt.savefig('simulation/ipr_comparison_zoomed.png')
+    plt.savefig('simulation/output/vv_resolution_comparison.png')
     
-    # Calculate energy concentration (fraction of energy in center 3 pixels vs total)
-    energy_s = np.sum(zoom_single**2)
-    energy_c = np.sum(zoom_combined**2)
+    # Calculate empirical energy concentration
+    energy_s_vv = np.sum(zoom_single_vv**2)
+    energy_c_vv = np.sum(zoom_combined_vv**2)
+    core_s_vv = np.sum(zoom_single_vv[window-1:window+2]**2) / energy_s_vv
+    core_c_vv = np.sum(zoom_combined_vv[window-1:window+2]**2) / energy_c_vv
+
+    energy_s_vh = np.sum(zoom_single_vh**2)
+    energy_c_vh = np.sum(zoom_combined_vh**2)
+    core_s_vh = np.sum(zoom_single_vh[window-1:window+2]**2) / energy_s_vh
+    core_c_vh = np.sum(zoom_combined_vh[window-1:window+2]**2) / energy_c_vh
+
+    print("\nQuantitative Comparison:")
+    print(f"VV Energy concentration in core 3 pixels - Single: {core_s_vv:.2%}")
+    print(f"VV Energy concentration in core 3 pixels - Combined: {core_c_vv:.2%}")
+    print(f"VH Energy concentration in core 3 pixels - Single: {core_s_vh:.2%}")
+    print(f"VH Energy concentration in core 3 pixels - Combined: {core_c_vh:.2%}")
     
-    core_s = np.sum(zoom_single[window-1:window+2]**2) / energy_s
-    core_c = np.sum(zoom_combined[window-1:window+2]**2) / energy_c
-    
-    print(f"\\nQuantitative Comparison:")
-    print(f"Energy concentration in core 3 pixels - Single: {core_s:.2%}")
-    print(f"Energy concentration in core 3 pixels - Combined: {core_c:.2%}")
-    
-    # Interpolated FWHM calculation
     def get_fwhm(slice_arr):
         above_half = np.where(slice_arr > 0.5)[0]
         if len(above_half) < 2: return 1.0
-        # Simple linear interpolation for the edges
         left = above_half[0]
         right = above_half[-1]
         
-        # interpolate left edge
         if left > 0:
             y1, y2 = slice_arr[left-1], slice_arr[left]
             frac_l = (0.5 - y1) / (y2 - y1)
@@ -215,7 +230,6 @@ def run_simulation():
         else:
             true_left = left
             
-        # interpolate right edge
         if right < len(slice_arr) - 1:
             y1, y2 = slice_arr[right], slice_arr[right+1]
             frac_r = (0.5 - y1) / (y2 - y1)
@@ -225,16 +239,20 @@ def run_simulation():
             
         return true_right - true_left
 
-    fwhm_single = get_fwhm(slice_single)
-    fwhm_combined = get_fwhm(slice_combined)
+    fwhm_s_vv = get_fwhm(slice_single_vv)
+    fwhm_c_vv = get_fwhm(slice_combined_vv)
+    fwhm_s_vh = get_fwhm(slice_single_vh)
+    fwhm_c_vh = get_fwhm(slice_combined_vh)
     
-    print(f"\\nFWHM (pixels) - Single Channel: {fwhm_single}")
-    print(f"FWHM (pixels) - Combined: {fwhm_combined}")
+    print(f"\nVV FWHM (pixels) - Single Channel: {fwhm_s_vv}")
+    print(f"VV FWHM (pixels) - Combined: {fwhm_c_vv}")
+    print(f"VH FWHM (pixels) - Single Channel: {fwhm_s_vh}")
+    print(f"VH FWHM (pixels) - Combined: {fwhm_c_vh}")
     
-    if fwhm_combined < fwhm_single:
-        print("SUCCESS: Combined resolution is sharper than single channel!")
+    if fwhm_c_vv < fwhm_s_vv * 0.6 and fwhm_c_vh < fwhm_s_vh * 0.6:
+        print("\nSUCCESS: Combined resolution is sharper than single channel for both polarizations!")
     else:
-        print("WARNING: Combined resolution did not improve.")
+        print("\nWARNING: Coherent combination did not achieve expected resolution improvement.")
 
 if __name__ == '__main__':
     run_simulation()

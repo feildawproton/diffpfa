@@ -8,15 +8,15 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from diffpfa.algo.pfa_engine import PFAEngine, PFAConfig
 from diffpfa.io.base import BaseCPHDReader, CPHDMetadata, CPHDChannelData, BaseSICDWriter, SICDImagePayload
-from simulation.simulate_stepped_chirp import MockSteppedChirpCPHDReader, SimWriter
+from simulation.simulate_stepped_chirp import MockSteppedChirpCPHDReader, TrackingSICDWriter
 
 def debug_res():
     reader = MockSteppedChirpCPHDReader()
-    writer = SimWriter()
+    writer = TrackingSICDWriter()
     
     device = "cuda" if torch.cuda.is_available() else "cpu"
     config = PFAConfig(
-        mode="czt",
+        mode="cztnufft",
         device=device,
         num_subpatches=1,
         align_subchannels=True,

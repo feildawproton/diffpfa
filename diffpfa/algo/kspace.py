@@ -2,7 +2,7 @@ from typing import Dict, Optional, Tuple
 import numpy as np
 import torch
 
-SPEED_OF_LIGHT = 299792458.0  # m/s
+from diffpfa.constants import SPEED_OF_LIGHT
 
 
 def compute_look_vectors(pvp: Dict[str, np.ndarray], device: torch.device = torch.device("cpu")) -> torch.Tensor:

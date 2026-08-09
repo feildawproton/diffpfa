@@ -42,6 +42,7 @@ class CPHDMetadata:
     extended_area: Optional[ImageAreaBounds] = None
     collection_start: Optional[str] = None
     radar_mode: Optional[str] = None
+    classification: Optional[str] = None
     srp_ecf: Optional[np.ndarray] = None
     arp_pos_coa: Optional[np.ndarray] = None
     arp_vel_coa: Optional[np.ndarray] = None

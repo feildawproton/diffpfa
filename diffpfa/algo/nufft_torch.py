@@ -266,8 +266,8 @@ def nufft_2d_type1_torch(
     grid_u_coords = (torch.arange(M_u, device=device, dtype=real_dtype) - M_u / 2.0) / M_u
     grid_r_coords = (torch.arange(M_r, device=device, dtype=real_dtype) - M_r / 2.0) / M_r
 
-    deconv_u = torch.i0(torch.sqrt(torch.clamp(torch.tensor(beta, dtype=real_dtype, device=device)**2 - (pi_val := math.pi * J * grid_u_coords)**2, min=1e-12)))
-    deconv_r = torch.i0(torch.sqrt(torch.clamp(torch.tensor(beta, dtype=real_dtype, device=device)**2 - (pi_val_r := math.pi * J * grid_r_coords)**2, min=1e-12)))
+    deconv_u = torch.i0(torch.sqrt(torch.clamp(torch.tensor(beta, dtype=real_dtype, device=device)**2 - (pi_val := math.pi * J * grid_u_coords)**2, min=1e-12))) / torch.i0(torch.tensor(beta, dtype=real_dtype, device=device))
+    deconv_r = torch.i0(torch.sqrt(torch.clamp(torch.tensor(beta, dtype=real_dtype, device=device)**2 - (pi_val_r := math.pi * J * grid_r_coords)**2, min=1e-12))) / torch.i0(torch.tensor(beta, dtype=real_dtype, device=device))
 
     deconv_2d = torch.outer(deconv_u, deconv_r).to(complex_dtype)
     img_deconv = img_shifted / (deconv_2d + 1e-12)

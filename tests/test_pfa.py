@@ -70,8 +70,7 @@ def test_czt_1d_accuracy():
 
 def test_cphd_reader():
     if not os.path.exists(SAMPLE_CPHD_PATH):
-        print(f"Skipping: {SAMPLE_CPHD_PATH} not found")
-        return
+        pytest.skip("Test file not found")
 
     with CPHDReader(SAMPLE_CPHD_PATH) as reader:
         meta = reader.get_metadata()
@@ -90,18 +89,17 @@ import time
 
 def test_pfa_pipeline_czt(tmp_path):
     if not os.path.exists(SAMPLE_CPHD_PATH):
-        print(f"Skipping: {SAMPLE_CPHD_PATH} not found")
-        return
+        pytest.skip("Test file not found")
 
     reader = CPHDReader(SAMPLE_CPHD_PATH)
     writer = SICDWriter()
 
     # Test CZT mode
     cfg_czt = PFAConfig(
-        mode="czt",
+        mode="cztnufft",
         image_area_mode="ImageArea",
         #custom_image_area=(-10.0, 10.0, -10.0, 10.0),
-        output_dir=str(tmp_path / "out_czt"),
+        output_dir="output/out_czt",
         device="cuda",
         num_subpatches=1
     )
@@ -120,8 +118,7 @@ def test_pfa_pipeline_czt(tmp_path):
 
 def test_pfa_pipeline_nufft(tmp_path):
     if not os.path.exists(SAMPLE_CPHD_PATH):
-        print(f"Skipping: {SAMPLE_CPHD_PATH} not found")
-        return
+        pytest.skip("Test file not found")
 
     reader = CPHDReader(SAMPLE_CPHD_PATH)
     writer = SICDWriter()
@@ -131,7 +128,7 @@ def test_pfa_pipeline_nufft(tmp_path):
         mode="nufft",
         image_area_mode="ImageArea",
         #custom_image_area=(-10.0, 10.0, -10.0, 10.0),
-        output_dir=str(tmp_path / "out_nufft"),
+        output_dir="output/out_nufft",
         device="cuda",
         num_subpatches=1
     )
@@ -148,31 +145,30 @@ def test_pfa_pipeline_nufft(tmp_path):
         assert os.path.exists(f)
         assert os.path.getsize(f) > 0
 
-def test_pfa_pipeline_hybrid(tmp_path):
+def test_pfa_pipeline_cztnufft(tmp_path):
     if not os.path.exists(SAMPLE_CPHD_PATH):
-        print(f"Skipping: {SAMPLE_CPHD_PATH} not found")
-        return
+        pytest.skip("Test file not found")
 
     reader = CPHDReader(SAMPLE_CPHD_PATH)
     writer = SICDWriter()
 
-    cfg_hybrid = PFAConfig(
-        mode="hybrid",
+    cfg_cztnufft = PFAConfig(
+        mode="cztnufft",
         image_area_mode="ImageArea",
-        output_dir=str(tmp_path / "out_hybrid"),
+        output_dir="output/out_cztnufft",
         device="cuda",
         num_subpatches=1
     )
-    engine_hybrid = PFAEngine(reader, writer, cfg_hybrid)
+    engine_cztnufft = PFAEngine(reader, writer, cfg_cztnufft)
     
     start_time = time.time()
-    outs_hybrid = engine_hybrid.run()
+    outs_cztnufft = engine_cztnufft.run()
     end_time = time.time()
     
-    print(f"\n[TIMING] Hybrid Mode took {end_time - start_time:.2f} seconds")
+    print(f"\n[TIMING] CZTNUFFT Mode took {end_time - start_time:.2f} seconds")
 
-    assert len(outs_hybrid) > 0
-    for f in outs_hybrid:
+    assert len(outs_cztnufft) > 0
+    for f in outs_cztnufft:
         assert os.path.exists(f)
         assert os.path.getsize(f) > 0
 

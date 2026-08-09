@@ -10,7 +10,7 @@ def main():
     parser = argparse.ArgumentParser(description="PyTorch Polar Format Algorithm (PFA) CPHD Image Processor.")
     parser.add_argument("cphd_path", type=str, help="Path to input CPHD file")
     parser.add_argument("-o", "--output_dir", type=str, default="output", help="Directory to save output SICD NITF files")
-    parser.add_argument("-m", "--mode", type=str, choices=["czt", "nufft", "hybrid"], default="hybrid", help="PFA interpolation algorithm mode")
+    parser.add_argument("-m", "--mode", type=str, choices=["nufft", "cztnufft"], default="cztnufft", help="PFA interpolation algorithm mode")
     parser.add_argument("-b", "--image_area_mode", type=str, choices=["ImageArea", "ExtendedArea", "InscribedRectangle", "TargetPixelSpacing"], default="ImageArea", help="Spatial image bounds mode")
     parser.add_argument("-s", "--spacing", type=float, nargs=2, metavar=("DU", "DR"), default=None, help="Custom pixel spacing (du dr) in meters")
     parser.add_argument("--debug_channels", action="store_true", help="Save intermediate uncombined channel SICD files")

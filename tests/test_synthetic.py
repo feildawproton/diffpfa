@@ -18,7 +18,7 @@ class MockSICDWriter(BaseSICDWriter):
     def close(self):
         pass
 
-@pytest.mark.parametrize("mode", ["czt", "nufft", "hybrid"])
+@pytest.mark.parametrize("mode", ["nufft", "cztnufft"])
 def test_synthetic_pfa_pipeline(synthetic_cphd_reader, pfa_device, mode):
     writer = MockSICDWriter()
     config = PFAConfig(

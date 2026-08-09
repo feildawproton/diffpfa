@@ -13,8 +13,8 @@ from diffpfa.algo.kspace import (
     compute_kspace,
     compute_look_components,
     compute_look_vectors,
-    SPEED_OF_LIGHT
 )
+from diffpfa.constants import SPEED_OF_LIGHT
 from diffpfa.algo.nufft_torch import nufft_1d_type1_torch, nufft_2d_type1_torch, nufft_grid_1d
 from diffpfa.io.base import (
     BaseCPHDReader,
@@ -28,7 +28,7 @@ from diffpfa.io.base import (
 @dataclass
 class PFAConfig:
     """Configuration settings for PFA processing."""
-    mode: str = "hybrid"  # "hybrid", "czt", "nufft"
+    mode: str = "cztnufft"  # "cztnufft", "nufft"
     image_area_mode: str = "ImageArea"  # "ImageArea", "ExtendedArea", "InscribedRectangle", "TargetPixelSpacing"
     image_plane: str = "Ground"  # "Ground" or "Slant"
     custom_pixel_spacing: Optional[Tuple[float, float]] = None  # (du, dr) in meters
@@ -166,7 +166,7 @@ class PFAEngine:
         return sig_patch, P_patch
 
 
-    def process_channel_czt(
+    def process_channel_czt_nufft(
         self,
         ch_data: CPHDChannelData,
         cphd_meta: CPHDMetadata,
@@ -179,12 +179,11 @@ class PFAEngine:
         global_k_ctr_u: float = None,
         global_k_ctr_r: float = None
     ) -> torch.Tensor:
-        """Processes a single CPHD channel using 1D PyTorch CZT separable resampling."""
+        """Processes a single CPHD channel using a CZTNUFFT approach: 1D CZT in Range, 1D NUFFT in Cross-Range."""
         signal = ch_data.signal.to(self.device)
         pvp = ch_data.pvp
         N_pulses, N_samples = signal.shape
 
-        # Step 0: RVP Deskew (if deramped data)
         signal = self._deskew_rvp(signal, pvp, N_samples)
 
         num_patches = max(1, self.config.num_subpatches)
@@ -212,162 +211,7 @@ class PFAEngine:
                 u_c = (p_u_min + p_u_max) / 2.0
                 r_c = (p_r_min + p_r_max) / 2.0
                 
-                # SCP Shift
                 sig_patch, P_patch = self._apply_scp_shift(signal, F_hz, P_vecs_orig, u_c, r_c, uIAX, uIAY)
-                
-                cos_theta, sin_theta = compute_look_components(P_patch, uIAX, uIAY)
-                F_cpm = 2.0 * F_hz / SPEED_OF_LIGHT
-                Ku = F_cpm * cos_theta.unsqueeze(1)
-                Kr = F_cpm * sin_theta.unsqueeze(1)
-                
-                local_u_min, local_u_max = p_u_min - u_c, p_u_max - u_c
-                local_r_min, local_r_max = p_r_min - r_c, p_r_max - r_c
-                
-                p_N_u, p_N_r = end_u - i_u, end_r - i_r
-                
-                # Shared Grid Definitions
-                oversample = 1.5
-                M_u = next_fast_len(int(math.ceil(p_N_u * oversample)))
-                M_r = next_fast_len(int(math.ceil(p_N_r * oversample)))
-                L_u = local_u_max - local_u_min
-                L_r = local_r_max - local_r_min
-                dK_u = p_N_u / (M_u * max(L_u, 1e-12))
-                dK_r = p_N_r / (M_r * max(L_r, 1e-12))
-                k_ctr_u = global_k_ctr_u if global_k_ctr_u is not None else (Ku.min() + Ku.max()).item() / 2.0
-                k_ctr_r = global_k_ctr_r if global_k_ctr_r is not None else (Kr.min() + Kr.max()).item() / 2.0
-                
-                # 1. Range CZT Resampling (K-space -> Cartesian K_r)
-                k_out_start_r = k_ctr_r - (M_r / 2.0) * dK_r
-                k_out_step_r = dK_r
-                
-                czt_batch_size = self.config.czt_batch_size
-                range_resampled = torch.zeros((N_pulses, M_r), dtype=sig_patch.dtype, device=self.device)
-                
-                for b in range(0, N_pulses, czt_batch_size):
-                    sig_b = sig_patch[b:b + czt_batch_size]
-                    kr_b = Kr[b:b + czt_batch_size]
-                    k_start = kr_b[:, 0].unsqueeze(1)
-                    k_step = ((kr_b[:, -1] - kr_b[:, 0]) / max(N_samples - 1, 1)).unsqueeze(1)
-                    
-                    batch_out = self._czt_fn(
-                        sig_b, 
-                        k_start=k_start, 
-                        k_step=k_step,
-                        M_out=M_r,
-                        k_out_start=k_out_start_r,
-                        k_out_step=k_out_step_r,
-                        spatial_extent=L_r,
-                        oversample=oversample
-                    )
-                    range_resampled[b:b+czt_batch_size, :] = batch_out
-                
-                # 2. Cross-Range CZT Resampling (Cartesian K_r -> Cartesian K_u)
-                cot_theta = Ku[:, N_samples // 2] / Kr[:, N_samples // 2]
-                
-                del sig_patch
-                del Kr
-                del Ku
-                
-                k_out_start_u = k_ctr_u - (M_u / 2.0) * dK_u
-                k_out_step_u = dK_u
-                
-                grid_2d = torch.zeros((M_u, M_r), dtype=range_resampled.dtype, device=self.device)
-                
-                for b in range(0, M_r, czt_batch_size):
-                    range_batch = range_resampled[:, b:b + czt_batch_size]
-                    
-                    # Compute Cartesian K_r for this batch
-                    Kr_cart_b = k_out_start_r + torch.arange(b, b + range_batch.shape[1], device=self.device) * dK_r
-                    batch_ku_start = (Kr_cart_b * cot_theta[0]).unsqueeze(1)
-                    batch_ku_step = (Kr_cart_b * ((cot_theta[-1] - cot_theta[0]) / max(N_pulses - 1, 1))).unsqueeze(1)
-                    
-                    # Transpose to (batch, N_pulses) so CZT operates on the N_pulses dimension
-                    range_batch_t = range_batch.T
-                    
-                    batch_out_t = self._czt_fn(
-                        range_batch_t, 
-                        k_start=batch_ku_start, 
-                        k_step=batch_ku_step,
-                        M_out=M_u,
-                        k_out_start=k_out_start_u,
-                        k_out_step=k_out_step_u,
-                        spatial_extent=L_u,
-                        oversample=oversample
-                    )
-                    grid_2d[:, b:b+range_batch.shape[1]] = batch_out_t.T
-                
-                del range_resampled
-                
-                # 3. 2D IFFT (No deconvolution needed since CZT is exact interpolation)
-                grid_shifted = torch.fft.ifftshift(grid_2d)
-                del grid_2d
-                img_oversampled = torch.fft.ifft2(grid_shifted)
-                del grid_shifted
-                img_oversampled.mul_(M_u * M_r)
-                img_shifted = torch.fft.fftshift(img_oversampled)
-                del img_oversampled
-                
-                start_u = (M_u - p_N_u) // 2
-                start_r = (M_r - p_N_r) // 2
-                
-                patch_img = img_shifted[start_u : start_u + p_N_u, start_r : start_r + p_N_r]
-                image_2d[i_u:end_u, i_r:end_r] = patch_img
-
-        return image_2d
-
-    def process_channel_hybrid(
-        self,
-        ch_data: CPHDChannelData,
-        cphd_meta: CPHDMetadata,
-        u_min: float,
-        u_max: float,
-        r_min: float,
-        r_max: float,
-        N_u: int,
-        N_r: int,
-        global_k_ctr_u: float = None,
-        global_k_ctr_r: float = None
-    ) -> torch.Tensor:
-        """Processes a single CPHD channel using a Hybrid approach: 1D CZT in Range, 1D NUFFT in Cross-Range."""
-        signal = ch_data.signal.to(self.device)
-        pvp = ch_data.pvp
-        N_pulses, N_samples = signal.shape
-
-        signal = self._deskew_rvp(signal, pvp, N_samples)
-
-        num_patches = max(1, self.config.num_subpatches)
-        subpatch_size_u = int(np.ceil(N_u / num_patches))
-        subpatch_size_r = int(np.ceil(N_r / num_patches))
-
-        image_2d = torch.zeros((N_u, N_r), dtype=signal.dtype, device=self.device)
-        
-        P_vecs_orig = compute_look_vectors(pvp, device=self.device)
-        F_hz = compute_fasttime_frequencies(pvp, N_samples, ch_data.domain_type, device=self.device)
-        
-        uIAX, uIAY = self._get_image_plane_vectors(cphd_meta)
-
-        u_edges = np.linspace(u_min, u_max, N_u + 1)
-        r_edges = np.linspace(r_min, r_max, N_r + 1)
-
-        for i_u in range(0, N_u, subpatch_size_u):
-            for i_r in range(0, N_r, subpatch_size_r):
-                end_u = min(i_u + subpatch_size_u, N_u)
-                end_r = min(i_r + subpatch_size_r, N_r)
-                
-                p_u_min, p_u_max = u_edges[i_u], u_edges[end_u]
-                p_r_min, p_r_max = r_edges[i_r], r_edges[end_r]
-                
-                u_c = (p_u_min + p_u_max) / 2.0
-                r_c = (p_r_min + p_r_max) / 2.0
-                
-                P_patch = P_vecs_orig + u_c * uIAX + r_c * uIAY
-                R_orig = torch.linalg.norm(P_vecs_orig, dim=-1)
-                R_patch = torch.linalg.norm(P_patch, dim=-1)
-                dR = R_patch - R_orig
-                
-                phi_corr = (4.0 * torch.pi / SPEED_OF_LIGHT) * F_hz * dR.unsqueeze(1)
-                corr_term = torch.exp(torch.complex(torch.zeros_like(phi_corr), phi_corr))
-                sig_patch = signal * corr_term.to(signal.dtype)
                 
                 cos_theta, sin_theta = compute_look_components(P_patch, uIAX, uIAY)
                 F_cpm = 2.0 * F_hz / SPEED_OF_LIGHT
@@ -496,8 +340,6 @@ class PFAEngine:
         subpatch_size_u = int(np.ceil(N_u / num_patches))
         subpatch_size_r = int(np.ceil(N_r / num_patches))
 
-        image_2d = torch.zeros((N_u, N_r), dtype=signal.dtype, device=self.device)
-        
         P_vecs_orig = compute_look_vectors(pvp, device=self.device)
         F_hz = compute_fasttime_frequencies(pvp, N_samples, ch_data.domain_type, device=self.device)
         
@@ -506,7 +348,9 @@ class PFAEngine:
         u_edges = np.linspace(u_min, u_max, N_u + 1)
         r_edges = np.linspace(r_min, r_max, N_r + 1)
 
+        image_rows = []
         for i_u in range(0, N_u, subpatch_size_u):
+            row_patches = []
             for i_r in range(0, N_r, subpatch_size_r):
                 end_u = min(i_u + subpatch_size_u, N_u)
                 end_r = min(i_r + subpatch_size_r, N_r)
@@ -517,19 +361,17 @@ class PFAEngine:
                 u_c = (p_u_min + p_u_max) / 2.0
                 r_c = (p_r_min + p_r_max) / 2.0
                 
-                P_patch = P_vecs_orig + u_c * uIAX + r_c * uIAY
-                R_orig = torch.linalg.norm(P_vecs_orig, dim=-1)
-                R_patch = torch.linalg.norm(P_patch, dim=-1)
-                dR = R_patch - R_orig
-                
-                phi_corr = (4.0 * torch.pi / SPEED_OF_LIGHT) * F_hz * dR.unsqueeze(1)
-                corr_term = torch.exp(torch.complex(torch.zeros_like(phi_corr), phi_corr))
-                sig_patch = signal * corr_term.to(signal.dtype)
+                sig_patch, P_patch = self._apply_scp_shift(signal, F_hz, P_vecs_orig, u_c, r_c, uIAX, uIAY)
                 
                 cos_theta, sin_theta = compute_look_components(P_patch, uIAX, uIAY)
                 F_cpm = 2.0 * F_hz / SPEED_OF_LIGHT
                 Ku = F_cpm * cos_theta.unsqueeze(1)
                 Kr = F_cpm * sin_theta.unsqueeze(1)
+                
+                if global_k_ctr_u is not None:
+                    Ku = Ku - global_k_ctr_u
+                if global_k_ctr_r is not None:
+                    Kr = Kr - global_k_ctr_r
                 
                 local_u_min, local_u_max = p_u_min - u_c, p_u_max - u_c
                 local_r_min, local_r_max = p_r_min - r_c, p_r_max - r_c
@@ -547,7 +389,10 @@ class PFAEngine:
                     r_max=local_r_max,
                     batch_size_pts=self.config.nufft_batch_size_pts
                 )
-                image_2d[i_u:end_u, i_r:end_r] = patch_img
+                row_patches.append(patch_img)
+            image_rows.append(torch.cat(row_patches, dim=1))
+
+        image_2d = torch.cat(image_rows, dim=0)
 
         return image_2d
 
@@ -616,8 +461,8 @@ class PFAEngine:
                     img = self.process_channel_czt(ch_data, cphd_meta, u_min, u_max, r_min, r_max, N_u, N_r, global_k_ctr_u, global_k_ctr_r)
                 elif mode == "nufft":
                     img = self.process_channel_nufft(ch_data, cphd_meta, u_min, u_max, r_min, r_max, N_u, N_r, global_k_ctr_u, global_k_ctr_r)
-                elif mode == "hybrid":
-                    img = self.process_channel_hybrid(ch_data, cphd_meta, u_min, u_max, r_min, r_max, N_u, N_r, global_k_ctr_u, global_k_ctr_r)
+                elif mode == "cztnufft":
+                    img = self.process_channel_czt_nufft(ch_data, cphd_meta, u_min, u_max, r_min, r_max, N_u, N_r, global_k_ctr_u, global_k_ctr_r)
                 else:
                     raise ValueError(f"Unsupported mode: {mode}")
 
@@ -630,8 +475,11 @@ class PFAEngine:
 
                     du = (u_max - u_min) / max(N_u, 1)
                     dr = (r_max - r_min) / max(N_r, 1)
-                    bw_u = (Ku_sample.max() - Ku_sample.min()).item()
-                    bw_r = (Kr_sample.max() - Kr_sample.min()).item()
+                    local_Ku, local_Kr = compute_kspace(
+                        ch_data.pvp, cphd_meta.uIAX, cphd_meta.uIAY, ch_data.signal.shape[1], ch_data.domain_type, device=self.device
+                    )
+                    bw_u = (local_Ku.max() - local_Ku.min()).item()
+                    bw_r = (local_Kr.max() - local_Kr.min()).item()
 
                     payload = SICDImagePayload(
                         complex_image=img,
@@ -665,8 +513,8 @@ class PFAEngine:
 
             du = (u_max - u_min) / max(N_u, 1)
             dr = (r_max - r_min) / max(N_r, 1)
-            bw_u = (Ku_sample.max() - Ku_sample.min()).item()
-            bw_r = (Kr_sample.max() - Kr_sample.min()).item()
+            bw_u = (global_ku_max - global_ku_min)
+            bw_r = (global_kr_max - global_kr_min)
 
             payload = SICDImagePayload(
                 complex_image=combined_img,

@@ -5,7 +5,7 @@ from diffpfa.io import CPHDReader
 SAMPLE_CPHD_PATH = "/home/feildaw/data/2023-11-14-03-38-20_UMBRA-04_CPHD.cphd"
 
 @pytest.mark.skipif(not os.path.exists(SAMPLE_CPHD_PATH), reason="CPHD file not found")
-@pytest.mark.parametrize("backend", ["sarpy", "sarkit"])
+@pytest.mark.parametrize("backend", ["sarkit"])
 def test_polarization_not_unknown(backend):
     try:
         reader = CPHDReader(SAMPLE_CPHD_PATH, backend=backend)

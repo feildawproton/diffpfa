@@ -10,7 +10,7 @@ from diffpfa.io import CPHDReader, SICDWriter
 
 def process_cphd(cphd_path, output_dir, device="cpu"):
     """Runs all three modes on the CPHD and returns paths to the generated SICD files."""
-    modes = ["nufft", "hybrid", "czt"]
+    modes = ["nufft", "cztnufft"]
     output_files = {}
 
     reader = CPHDReader(cphd_path, backend="auto")
@@ -37,7 +37,7 @@ def process_cphd(cphd_path, output_dir, device="cpu"):
     return output_files
 
 def compare_images(paths, artifact_dir):
-    """Compares CZT and Hybrid to NUFFT, and saves error plots."""
+    """Compares CZT and CZTNUFFT to NUFFT, and saves error plots."""
     print("\n--- Comparing Images ---")
     
     # Load complex data
@@ -45,9 +45,9 @@ def compare_images(paths, artifact_dir):
     with SICDReader(paths["nufft"]) as reader:
         img_nufft = reader[:]
 
-    print(f"Loading Hybrid...")
-    with SICDReader(paths["hybrid"]) as reader:
-        img_hybrid = reader[:]
+    print(f"Loading CZTNUFFT...")
+    with SICDReader(paths["cztnufft"]) as reader:
+        img_czt_nufft = reader[:]
 
     print(f"Loading CZT...")
     with SICDReader(paths["czt"]) as reader:
@@ -58,10 +58,10 @@ def compare_images(paths, artifact_dir):
 
     # Calculate Phase Differences
     print("Calculating Phase Differences...")
-    phase_diff_hybrid = np.zeros_like(img_nufft, dtype=np.float32)
+    phase_diff_czt_nufftrid = np.zeros_like(img_nufft, dtype=np.float32)
     phase_diff_czt = np.zeros_like(img_nufft, dtype=np.float32)
 
-    phase_diff_hybrid[mask] = np.angle(img_hybrid[mask] * np.conj(img_nufft[mask]))
+    phase_diff_czt_nufftrid[mask] = np.angle(img_czt_nufft[mask] * np.conj(img_nufft[mask]))
     phase_diff_czt[mask] = np.angle(img_czt[mask] * np.conj(img_nufft[mask]))
 
     # Plotting
@@ -75,8 +75,8 @@ def compare_images(paths, artifact_dir):
     axes[0].set_ylabel('Cross-Range')
     fig.colorbar(im0, ax=axes[0], fraction=0.046, pad=0.04)
 
-    im1 = axes[1].imshow(np.degrees(phase_diff_hybrid), cmap='RdBu', vmin=-180, vmax=180, aspect='auto')
-    axes[1].set_title('Phase Error: Hybrid vs NUFFT (Degrees)')
+    im1 = axes[1].imshow(np.degrees(phase_diff_czt_nufftrid), cmap='RdBu', vmin=-180, vmax=180, aspect='auto')
+    axes[1].set_title('Phase Error: CZTNUFFT vs NUFFT (Degrees)')
     axes[1].set_xlabel('Range')
     axes[1].set_ylabel('Cross-Range')
     fig.colorbar(im1, ax=axes[1], fraction=0.046, pad=0.04)

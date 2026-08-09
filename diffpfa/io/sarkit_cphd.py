@@ -34,21 +34,21 @@ class SarkitCPHDReader(BaseCPHDReader):
 
         fx_min = xml_helper.load("./{*}Global/{*}FxBand/{*}FxMin")
         if fx_min is None:
-            fx_min = 0.0
+            raise ValueError("CPHD missing required field: Global/FxBand/FxMin")
         fx_max = xml_helper.load("./{*}Global/{*}FxBand/{*}FxMax")
         if fx_max is None:
-            fx_max = 0.0
+            raise ValueError("CPHD missing required field: Global/FxBand/FxMax")
 
         iarp_ecf = xml_helper.load("./{*}SceneCoordinates/{*}IARP/{*}ECF")
         if iarp_ecf is None:
-            iarp_ecf = np.array([0.0, 0.0, 0.0])
+            raise ValueError("CPHD missing required field: SceneCoordinates/IARP/ECF")
 
         uIAX = xml_helper.load("./{*}SceneCoordinates/{*}ReferenceSurface/{*}Planar/{*}uIAX")
         if uIAX is None:
-            uIAX = np.array([1.0, 0.0, 0.0])
+            raise ValueError("CPHD missing required field: uIAX")
         uIAY = xml_helper.load("./{*}SceneCoordinates/{*}ReferenceSurface/{*}Planar/{*}uIAY")
         if uIAY is None:
-            uIAY = np.array([0.0, 1.0, 0.0])
+            raise ValueError("CPHD missing required field: uIAY")
 
         # ImageArea and ExtendedArea parsing
         img_area = None
@@ -85,6 +85,7 @@ class SarkitCPHDReader(BaseCPHDReader):
 
         coll_start = xml_helper.load("./{*}Global/{*}Timeline/{*}CollectionStart")
         radar_mode = xml_helper.load("./{*}CollectionID/{*}RadarMode/{*}ModeType")
+        classification = xml_helper.load("./{*}CollectionID/{*}Classification")
 
         ls = xml_helper.load("./{*}SceneCoordinates/{*}ImageGrid/{*}IAXExtent/{*}LineSpacing")
         ss = xml_helper.load("./{*}SceneCoordinates/{*}ImageGrid/{*}IAYExtent/{*}SampleSpacing")
@@ -104,6 +105,7 @@ class SarkitCPHDReader(BaseCPHDReader):
             extended_area=ext_area,
             collection_start=str(coll_start) if coll_start else None,
             radar_mode=str(radar_mode) if radar_mode else None,
+            classification=str(classification) if classification else None,
             srp_ecf=srp_ecf,
             arp_pos_coa=arp_pos,
             arp_vel_coa=arp_vel,
@@ -197,3 +199,6 @@ class SarkitCPHDReader(BaseCPHDReader):
             except Exception:
                 pass
             self.file = None
+
+    def __del__(self):
+        self.close()
