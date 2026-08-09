@@ -24,3 +24,6 @@ mypyenv/
 *.png
 output/
 simulation/output/
+
+# Private
+PI/

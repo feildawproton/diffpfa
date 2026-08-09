@@ -54,3 +54,10 @@ To validate the mathematical correctness of sub-band and polarimetric coherent c
 
 ## Notes
 The `sarpy` backend support has been completely removed in favor of `sarkit` to avoid deprecation warnings and ensure complete schema compliance. Pure `czt` processing has also been removed due to its fundamental unsuitability for cross-range wide aperture curvature (which requires non-linear tracking).
+
+## Performance Tuning Lessons
+- **For Users:** When processing large multi-gigabyte Umbra datasets, use the `cztnufft` mode with `num_subpatches=1` (Global PFA). We have optimized the engine to perform asynchronous batch-loading of data to the GPU and to coherently combine multi-channel data entirely in K-space. This drastically reduces runtime.
+- **For Test Engineers:** The `profile_gpu_compute.py` methodology uses synthetic random tensors of specific dimensions to isolate GPU compute performance (bypassing disk I/O bottlenecks). When testing memory bounds, be aware that PyTorch memory pinning (`pin_memory()`) requires substantial contiguous host memory and may OOM before the GPU does.
+- **For Developers:** 
+  - **Memory over Compute:** In GPU programming, avoiding massive intermediate memory allocations (like `torch.stack`) and unnecessary domain transitions (like redundant $O(N \log N)$ 2D IFFTs) is far more important than optimizing small kernel instructions.
+  - **K-Space Combination:** Coherent combination of sub-channels (including cross-correlation phase alignment) can and should be performed directly on the Cartesian K-space grids prior to the 2D IFFT. This exploits the linearity of the Fourier transform and reduces the number of massive 2D IFFTs required per polarization from $N$ to 1.

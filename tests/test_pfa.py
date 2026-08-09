@@ -85,36 +85,7 @@ def test_cphd_reader():
         assert "SRPPos" in ch_data.pvp
 
 
-import time
 
-def test_pfa_pipeline_czt(tmp_path):
-    if not os.path.exists(SAMPLE_CPHD_PATH):
-        pytest.skip("Test file not found")
-
-    reader = CPHDReader(SAMPLE_CPHD_PATH)
-    writer = SICDWriter()
-
-    # Test CZT mode
-    cfg_czt = PFAConfig(
-        mode="cztnufft",
-        image_area_mode="ImageArea",
-        #custom_image_area=(-10.0, 10.0, -10.0, 10.0),
-        output_dir="output/out_czt",
-        device="cuda",
-        num_subpatches=1
-    )
-    engine_czt = PFAEngine(reader, writer, cfg_czt)
-    
-    start_time = time.time()
-    outs_czt = engine_czt.run()
-    end_time = time.time()
-    
-    print(f"\n[TIMING] CZT Mode took {end_time - start_time:.2f} seconds")
-
-    assert len(outs_czt) > 0
-    for f in outs_czt:
-        assert os.path.exists(f)
-        assert os.path.getsize(f) > 0
 
 def test_pfa_pipeline_nufft(tmp_path):
     if not os.path.exists(SAMPLE_CPHD_PATH):

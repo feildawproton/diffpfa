@@ -42,6 +42,9 @@ def align_and_combine_channels(
 
         aligned_images.append(curr_aligned)
 
-    # Coherent summation across channels
-    combined_image = torch.stack(aligned_images, dim=0).sum(dim=0)
+    # Coherent summation across channels without large stack allocations
+    combined_image = aligned_images[0].clone()
+    for i in range(1, len(aligned_images)):
+        combined_image.add_(aligned_images[i])
+        
     return combined_image, aligned_images
