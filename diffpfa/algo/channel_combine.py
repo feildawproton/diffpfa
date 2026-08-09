@@ -36,7 +36,7 @@ def align_and_combine_channels(
             delta_phi = torch.angle(cross_corr)
 
             # Apply phase alignment rotation
-            curr_aligned = curr_img * torch.exp(1j * delta_phi)
+            curr_aligned = curr_img * torch.exp(1j * delta_phi.to(torch.complex64))
         else:
             curr_aligned = curr_img
 

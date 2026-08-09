@@ -123,7 +123,7 @@ def czt_resample_kspace_1d(
     M_out: int,
     k_out_start: float,
     k_out_step: float,
-    L_r: float,
+    spatial_extent: float,
     oversample: float = 2.0
 ) -> torch.Tensor:
     """
@@ -138,17 +138,17 @@ def czt_resample_kspace_1d(
     spatial = czt_1d_torch(
         signal,
         M=N_spatial,
-        r_min=-L_r/2.0,
-        r_max=L_r/2.0,
+        r_min=-spatial_extent/2.0,
+        r_max=spatial_extent/2.0,
         k_step=k_step,
         k_start=k_start,
         dim=-1
     )
     
-    r_step = L_r / max(N_spatial - 1, 1)
+    r_step = spatial_extent / max(N_spatial - 1, 1)
     
     device = signal.device
-    r_start_t = torch.tensor(-L_r/2.0, device=device, dtype=torch.float64)
+    r_start_t = torch.tensor(-spatial_extent/2.0, device=device, dtype=torch.float64)
     r_step_t = torch.tensor(r_step, device=device, dtype=torch.float64)
     
     # 2. Spatial Domain to Cartesian K-space (Fourier-like)

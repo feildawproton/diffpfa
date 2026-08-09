@@ -50,12 +50,47 @@ class SarkitCPHDReader(BaseCPHDReader):
         if uIAY is None:
             uIAY = np.array([0.0, 1.0, 0.0])
 
-        # ImageArea (not fully implemented in sarkit wrapper, keeping simple)
+        # ImageArea and ExtendedArea parsing
         img_area = None
         ext_area = None
+        
+        # Helper for parsing polygon vertices
+        def parse_polygon(poly_xpath):
+            vertex_nodes = xmltree.findall(f"{poly_xpath}/{{*}}Vertex")
+            if not vertex_nodes:
+                return None
+            polygon = []
+            for node in vertex_nodes:
+                x_node = node.find("./{*}X")
+                y_node = node.find("./{*}Y")
+                if x_node is not None and y_node is not None:
+                    polygon.append((float(x_node.text), float(y_node.text)))
+            return polygon
+
+        ia_x1y1 = xml_helper.load("./{*}SceneCoordinates/{*}ImageArea/{*}X1Y1")
+        ia_x2y2 = xml_helper.load("./{*}SceneCoordinates/{*}ImageArea/{*}X2Y2")
+        if ia_x1y1 is not None and ia_x2y2 is not None:
+            ia_poly = parse_polygon(".//{*}SceneCoordinates/{*}ImageArea/{*}Polygon")
+            img_area = ImageAreaBounds(
+                x1=ia_x1y1[0], y1=ia_x1y1[1], x2=ia_x2y2[0], y2=ia_x2y2[1], polygon=ia_poly
+            )
+
+        ea_x1y1 = xml_helper.load("./{*}SceneCoordinates/{*}ExtendedArea/{*}X1Y1")
+        ea_x2y2 = xml_helper.load("./{*}SceneCoordinates/{*}ExtendedArea/{*}X2Y2")
+        if ea_x1y1 is not None and ea_x2y2 is not None:
+            ea_poly = parse_polygon(".//{*}SceneCoordinates/{*}ExtendedArea/{*}Polygon")
+            ext_area = ImageAreaBounds(
+                x1=ea_x1y1[0], y1=ea_x1y1[1], x2=ea_x2y2[0], y2=ea_x2y2[1], polygon=ea_poly
+            )
 
         coll_start = xml_helper.load("./{*}Global/{*}Timeline/{*}CollectionStart")
         radar_mode = xml_helper.load("./{*}CollectionID/{*}RadarMode/{*}ModeType")
+
+        ls = xml_helper.load("./{*}SceneCoordinates/{*}ImageGrid/{*}IAXExtent/{*}LineSpacing")
+        ss = xml_helper.load("./{*}SceneCoordinates/{*}ImageGrid/{*}IAYExtent/{*}SampleSpacing")
+        srp_ecf = xml_helper.load("./{*}ReferenceGeometry/{*}SRP/{*}ECF")
+        arp_pos = xml_helper.load("./{*}ReferenceGeometry/{*}Monostatic/{*}ARPPos")
+        arp_vel = xml_helper.load("./{*}ReferenceGeometry/{*}Monostatic/{*}ARPVel")
 
         self._meta_cache = CPHDMetadata(
             domain_type=str(domain_type),
@@ -69,6 +104,11 @@ class SarkitCPHDReader(BaseCPHDReader):
             extended_area=ext_area,
             collection_start=str(coll_start) if coll_start else None,
             radar_mode=str(radar_mode) if radar_mode else None,
+            srp_ecf=srp_ecf,
+            arp_pos_coa=arp_pos,
+            arp_vel_coa=arp_vel,
+            line_spacing=float(ls) if ls is not None else None,
+            sample_spacing=float(ss) if ss is not None else None,
             raw_meta=xmltree,
         )
         return self._meta_cache
@@ -118,10 +158,12 @@ class SarkitCPHDReader(BaseCPHDReader):
         fxbw = 0.0
 
         if params_node is not None:
-            tp = params_node.find("./{*}TxPol")
-            if tp is not None: tx_pol = tp.text
-            rp = params_node.find("./{*}RcvPol")
-            if rp is not None: rcv_pol = rp.text
+            pol_node = params_node.find("./{*}Polarization")
+            if pol_node is not None:
+                tp = pol_node.find("./{*}TxPol")
+                if tp is not None: tx_pol = tp.text
+                rp = pol_node.find("./{*}RcvPol")
+                if rp is not None: rcv_pol = rp.text
             fc = params_node.find("./{*}FxC")
             if fc is not None: fxc = float(fc.text)
             fbw = params_node.find("./{*}FxBW")

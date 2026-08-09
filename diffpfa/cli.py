@@ -3,7 +3,7 @@ import os
 import sys
 
 from diffpfa.algo import PFAConfig, PFAEngine
-from diffpfa.io import SarpyCPHDReader, SarpySICDWriter
+from diffpfa.io import CPHDReader, SICDWriter
 
 
 def main():
@@ -15,6 +15,7 @@ def main():
     parser.add_argument("-s", "--spacing", type=float, nargs=2, metavar=("DU", "DR"), default=None, help="Custom pixel spacing (du dr) in meters")
     parser.add_argument("--debug_channels", action="store_true", help="Save intermediate uncombined channel SICD files")
     parser.add_argument("--no_align", action="store_true", help="Disable relative phase alignment between sub-channels")
+    parser.add_argument("--backend", type=str, choices=["auto", "sarkit", "sarpy"], default="auto", help="I/O backend to use")
     parser.add_argument("--device", type=str, default="cpu", help="Compute device ('cpu', 'cuda')")
 
     args = parser.parse_args()
@@ -23,9 +24,9 @@ def main():
         print(f"Error: CPHD file not found at {args.cphd_path}", file=sys.stderr)
         sys.exit(1)
 
-    print(f"Opening CPHD file: {args.cphd_path}")
-    reader = SarpyCPHDReader(args.cphd_path)
-    writer = SarpySICDWriter()
+    print(f"Opening CPHD file: {args.cphd_path} with backend {args.backend}")
+    reader = CPHDReader(args.cphd_path, backend=args.backend)
+    writer = SICDWriter(backend=args.backend)
 
     custom_spacing = tuple(args.spacing) if args.spacing else None
 

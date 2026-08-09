@@ -6,8 +6,7 @@ from diffpfa.io.base import (
     ImageAreaBounds,
     SICDImagePayload,
 )
-from diffpfa.io.sarpy_cphd import SarpyCPHDReader
-from diffpfa.io.sarpy_sicd import SarpySICDWriter
+
 
 def _get_backend(backend: str) -> str:
     if backend != "auto":
@@ -35,6 +34,7 @@ def CPHDReader(file_path: str, backend: str = "auto") -> BaseCPHDReader:
         from diffpfa.io.sarkit_cphd import SarkitCPHDReader
         return SarkitCPHDReader(file_path)
     elif selected_backend == "sarpy":
+        from diffpfa.io.sarpy_cphd import SarpyCPHDReader
         return SarpyCPHDReader(file_path)
     else:
         raise ValueError(f"Unknown backend: {backend}")
@@ -47,6 +47,7 @@ def SICDWriter(backend: str = "auto") -> BaseSICDWriter:
         from diffpfa.io.sarkit_sicd import SarkitSICDWriter
         return SarkitSICDWriter()
     elif selected_backend == "sarpy":
+        from diffpfa.io.sarpy_sicd import SarpySICDWriter
         return SarpySICDWriter()
     else:
         raise ValueError(f"Unknown backend: {backend}")

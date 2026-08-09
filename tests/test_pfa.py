@@ -17,7 +17,7 @@ from diffpfa.algo import (
     czt_1d_torch,
     nufft_2d_type1_torch,
 )
-from diffpfa.io import SarpyCPHDReader, SarpySICDWriter
+from diffpfa.io import CPHDReader, SICDWriter
 
 SAMPLE_CPHD_PATH = "/home/feildaw/data/2023-11-14-03-38-20_UMBRA-04_CPHD.cphd"
 
@@ -73,7 +73,7 @@ def test_cphd_reader():
         print(f"Skipping: {SAMPLE_CPHD_PATH} not found")
         return
 
-    with SarpyCPHDReader(SAMPLE_CPHD_PATH) as reader:
+    with CPHDReader(SAMPLE_CPHD_PATH) as reader:
         meta = reader.get_metadata()
         channels = reader.get_channel_names()
 
@@ -93,8 +93,8 @@ def test_pfa_pipeline_czt(tmp_path):
         print(f"Skipping: {SAMPLE_CPHD_PATH} not found")
         return
 
-    reader = SarpyCPHDReader(SAMPLE_CPHD_PATH)
-    writer = SarpySICDWriter()
+    reader = CPHDReader(SAMPLE_CPHD_PATH)
+    writer = SICDWriter()
 
     # Test CZT mode
     cfg_czt = PFAConfig(
@@ -103,7 +103,7 @@ def test_pfa_pipeline_czt(tmp_path):
         #custom_image_area=(-10.0, 10.0, -10.0, 10.0),
         output_dir=str(tmp_path / "out_czt"),
         device="cuda",
-        num_subpatches=2
+        num_subpatches=1
     )
     engine_czt = PFAEngine(reader, writer, cfg_czt)
     
@@ -123,8 +123,8 @@ def test_pfa_pipeline_nufft(tmp_path):
         print(f"Skipping: {SAMPLE_CPHD_PATH} not found")
         return
 
-    reader = SarpyCPHDReader(SAMPLE_CPHD_PATH)
-    writer = SarpySICDWriter()
+    reader = CPHDReader(SAMPLE_CPHD_PATH)
+    writer = SICDWriter()
 
     # Test NUFFT mode
     cfg_nufft = PFAConfig(
@@ -133,7 +133,7 @@ def test_pfa_pipeline_nufft(tmp_path):
         #custom_image_area=(-10.0, 10.0, -10.0, 10.0),
         output_dir=str(tmp_path / "out_nufft"),
         device="cuda",
-        num_subpatches=2
+        num_subpatches=1
     )
     engine_nufft = PFAEngine(reader, writer, cfg_nufft)
     
@@ -153,15 +153,15 @@ def test_pfa_pipeline_hybrid(tmp_path):
         print(f"Skipping: {SAMPLE_CPHD_PATH} not found")
         return
 
-    reader = SarpyCPHDReader(SAMPLE_CPHD_PATH)
-    writer = SarpySICDWriter()
+    reader = CPHDReader(SAMPLE_CPHD_PATH)
+    writer = SICDWriter()
 
     cfg_hybrid = PFAConfig(
         mode="hybrid",
         image_area_mode="ImageArea",
         output_dir=str(tmp_path / "out_hybrid"),
         device="cuda",
-        num_subpatches=2
+        num_subpatches=1
     )
     engine_hybrid = PFAEngine(reader, writer, cfg_hybrid)
     

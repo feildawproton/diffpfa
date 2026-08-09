@@ -1,18 +1,11 @@
-from diffpfa.algo import PFAConfig, PFAEngine
-from diffpfa.io.sarpy_cphd import SarpyCPHDReader
-from diffpfa.io.sarkit_cphd import SarkitCPHDReader
+import os
+import pytest
 import numpy as np
-from diffpfa.algo.pfa_engine import SPEED_OF_LIGHT, compute_look_vectors
+from diffpfa.io import CPHDReader
+from diffpfa.algo.pfa_engine import SPEED_OF_LIGHT
+from diffpfa.algo.kspace import compute_look_vectors
 
-cphd_path = "/home/feildaw/data/2023-11-14-03-38-20_UMBRA-04_CPHD.cphd"
-
-r_sarpy = SarpyCPHDReader(cphd_path)
-m_sarpy = r_sarpy.get_metadata()
-ch_sarpy = r_sarpy.read_channel(r_sarpy.get_channel_names()[0])
-
-r_sarkit = SarkitCPHDReader(cphd_path)
-m_sarkit = r_sarkit.get_metadata()
-ch_sarkit = r_sarkit.read_channel(r_sarkit.get_channel_names()[0])
+SAMPLE_CPHD_PATH = "/home/feildaw/data/2023-11-14-03-38-20_UMBRA-04_CPHD.cphd"
 
 def get_grid_size(ch_data, cphd_meta):
     bw = cphd_meta.global_fx_max - cphd_meta.global_fx_min
@@ -37,5 +30,21 @@ def get_grid_size(ch_data, cphd_meta):
     M_r = int(np.ceil(N_r * 1.5))
     return M_u, M_r
 
-print("SARPY grid size:", get_grid_size(ch_sarpy, m_sarpy))
-print("SARKIT grid size:", get_grid_size(ch_sarkit, m_sarkit))
+@pytest.mark.skipif(not os.path.exists(SAMPLE_CPHD_PATH), reason="CPHD file not found")
+def test_grid_size_match():
+    try:
+        r_sarpy = CPHDReader(SAMPLE_CPHD_PATH, backend="sarpy")
+        r_sarkit = CPHDReader(SAMPLE_CPHD_PATH, backend="sarkit")
+    except ImportError:
+        pytest.skip("Both backends required for match test")
+        
+    m_sarpy = r_sarpy.get_metadata()
+    ch_sarpy = r_sarpy.read_channel(r_sarpy.get_channel_names()[0])
+    
+    m_sarkit = r_sarkit.get_metadata()
+    ch_sarkit = r_sarkit.read_channel(r_sarkit.get_channel_names()[0])
+    
+    grid_sarpy = get_grid_size(ch_sarpy, m_sarpy)
+    grid_sarkit = get_grid_size(ch_sarkit, m_sarkit)
+    
+    assert grid_sarpy == grid_sarkit

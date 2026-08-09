@@ -1,3 +1,4 @@
+from scipy.fft import next_fast_len
 from dataclasses import dataclass
 import os
 import math
@@ -55,14 +56,15 @@ class PFAEngine:
         self.config = config or PFAConfig()
         self.device = torch.device(self.config.device)
         
-        # JIT compile hot paths for massive GPU acceleration if requested
+        # JIT compile hot paths with torch.compile if requested
         if self.config.enable_compile:
-            global czt_1d_torch, nufft_1d_type1_torch, nufft_2d_type1_torch
-            import torch._dynamo as dynamo
-            dynamo.config.suppress_errors = True
-            czt_1d_torch = torch.compile(czt_1d_torch)
-            nufft_1d_type1_torch = torch.compile(nufft_1d_type1_torch)
-            nufft_2d_type1_torch = torch.compile(nufft_2d_type1_torch)
+            self._czt_fn = torch.compile(czt_resample_kspace_1d)
+            self._nufft_1d_fn = torch.compile(nufft_1d_type1_torch)
+            self._nufft_2d_fn = torch.compile(nufft_2d_type1_torch)
+        else:
+            self._czt_fn = czt_resample_kspace_1d
+            self._nufft_1d_fn = nufft_1d_type1_torch
+            self._nufft_2d_fn = nufft_2d_type1_torch
 
     def _determine_spatial_bounds(
         self,
@@ -108,6 +110,9 @@ class PFAEngine:
             du, dr = self.config.custom_pixel_spacing
             N_u = int(np.round(L_u / du))
             N_r = int(np.round(L_r / dr))
+        elif cphd_meta.line_spacing is not None and cphd_meta.sample_spacing is not None:
+            N_u = int(np.round(L_u / cphd_meta.line_spacing))
+            N_r = int(np.round(L_r / cphd_meta.sample_spacing))
         else:
             # Match native bandwidth pixel spacing
             N_u = int(np.round(L_u / native_du))
@@ -119,23 +124,8 @@ class PFAEngine:
         return u_min, u_max, r_min, r_max, N_u, N_r
 
 
-    def process_channel_czt(
-        self,
-        ch_data: CPHDChannelData,
-        cphd_meta: CPHDMetadata,
-        u_min: float,
-        u_max: float,
-        r_min: float,
-        r_max: float,
-        N_u: int,
-        N_r: int
-    ) -> torch.Tensor:
-        """Processes a single CPHD channel using 1D PyTorch CZT separable resampling."""
-        signal = ch_data.signal.to(self.device)
-        pvp = ch_data.pvp
-        N_pulses, N_samples = signal.shape
 
-        # Step 0: RVP Deskew (if deramped data)
+    def _deskew_rvp(self, signal: torch.Tensor, pvp: dict, N_samples: int) -> torch.Tensor:
         if "TxFMRate" in pvp:
             gamma = torch.as_tensor(pvp["TxFMRate"], dtype=torch.float64, device=self.device)
             if "SC0" in pvp and "SCSS" in pvp:
@@ -146,6 +136,56 @@ class PFAEngine:
                 rvp_phase = torch.pi * (F_hz ** 2) / gamma.unsqueeze(1)
                 rvp_term = torch.exp(torch.complex(torch.zeros_like(rvp_phase), rvp_phase))
                 signal = signal * rvp_term.to(signal.dtype)
+        return signal
+
+    def _get_image_plane_vectors(self, cphd_meta: CPHDMetadata) -> Tuple[torch.Tensor, torch.Tensor]:
+        if self.config.image_plane == "Slant":
+            srp = cphd_meta.srp_ecf
+            arp = cphd_meta.arp_pos_coa
+            arp_v = cphd_meta.arp_vel_coa
+            p_vec = srp - arp
+            u_row = p_vec / np.linalg.norm(p_vec)
+            u_v = arp_v / np.linalg.norm(arp_v)
+            u_col_unnorm = u_v - np.dot(u_v, u_row) * u_row
+            u_col = u_col_unnorm / np.linalg.norm(u_col_unnorm)
+            uIAX = torch.as_tensor(u_col, dtype=torch.float64, device=self.device)
+            uIAY = torch.as_tensor(u_row, dtype=torch.float64, device=self.device)
+        else:
+            uIAX = torch.as_tensor(cphd_meta.uIAX, dtype=torch.float64, device=self.device)
+            uIAY = torch.as_tensor(cphd_meta.uIAY, dtype=torch.float64, device=self.device)
+        return uIAX, uIAY
+        
+    def _apply_scp_shift(self, signal, F_hz, P_vecs_orig, u_c, r_c, uIAX, uIAY):
+        P_patch = P_vecs_orig + u_c * uIAX + r_c * uIAY
+        R_orig = torch.linalg.norm(P_vecs_orig, dim=-1)
+        R_patch = torch.linalg.norm(P_patch, dim=-1)
+        dR = R_patch - R_orig
+        phi_corr = (4.0 * torch.pi / SPEED_OF_LIGHT) * F_hz * dR.unsqueeze(1)
+        corr_term = torch.exp(torch.complex(torch.zeros_like(phi_corr), phi_corr))
+        sig_patch = signal * corr_term.to(signal.dtype)
+        return sig_patch, P_patch
+
+
+    def process_channel_czt(
+        self,
+        ch_data: CPHDChannelData,
+        cphd_meta: CPHDMetadata,
+        u_min: float,
+        u_max: float,
+        r_min: float,
+        r_max: float,
+        N_u: int,
+        N_r: int,
+        global_k_ctr_u: float = None,
+        global_k_ctr_r: float = None
+    ) -> torch.Tensor:
+        """Processes a single CPHD channel using 1D PyTorch CZT separable resampling."""
+        signal = ch_data.signal.to(self.device)
+        pvp = ch_data.pvp
+        N_pulses, N_samples = signal.shape
+
+        # Step 0: RVP Deskew (if deramped data)
+        signal = self._deskew_rvp(signal, pvp, N_samples)
 
         num_patches = max(1, self.config.num_subpatches)
         subpatch_size_u = int(np.ceil(N_u / num_patches))
@@ -156,28 +196,7 @@ class PFAEngine:
         P_vecs_orig = compute_look_vectors(pvp, device=self.device)
         F_hz = compute_fasttime_frequencies(pvp, N_samples, ch_data.domain_type, device=self.device)
         
-        if self.config.image_plane == "Slant":
-            # Extract ReferenceGeometry via the original Sarpy object
-            # Note: We re-open or access the underlying raw metadata from the reader if needed.
-            # But wait, our cphd_meta is just a dataclass. Let's get the original metadata from self.reader!
-            raw_meta = self.reader.reader.cphd_meta
-            rg = raw_meta.ReferenceGeometry
-            srp = rg.SRP.get_array()
-            arp = rg.Monostatic.ARPPos.get_array()
-            arp_v = rg.Monostatic.ARPVel.get_array()
-            
-            p_vec = srp - arp
-            u_row = p_vec / np.linalg.norm(p_vec)
-            
-            u_v = arp_v / np.linalg.norm(arp_v)
-            u_col_unnorm = u_v - np.dot(u_v, u_row) * u_row
-            u_col = u_col_unnorm / np.linalg.norm(u_col_unnorm)
-            
-            uIAX = torch.as_tensor(u_col, dtype=torch.float64, device=self.device)
-            uIAY = torch.as_tensor(u_row, dtype=torch.float64, device=self.device)
-        else:
-            uIAX = torch.as_tensor(cphd_meta.uIAX, dtype=torch.float64, device=self.device)
-            uIAY = torch.as_tensor(cphd_meta.uIAY, dtype=torch.float64, device=self.device)
+        uIAX, uIAY = self._get_image_plane_vectors(cphd_meta)
 
         u_edges = np.linspace(u_min, u_max, N_u + 1)
         r_edges = np.linspace(r_min, r_max, N_r + 1)
@@ -194,14 +213,7 @@ class PFAEngine:
                 r_c = (p_r_min + p_r_max) / 2.0
                 
                 # SCP Shift
-                P_patch = P_vecs_orig + u_c * uIAX + r_c * uIAY
-                R_orig = torch.linalg.norm(P_vecs_orig, dim=-1)
-                R_patch = torch.linalg.norm(P_patch, dim=-1)
-                dR = R_patch - R_orig
-                
-                phi_corr = (4.0 * torch.pi / SPEED_OF_LIGHT) * F_hz * dR.unsqueeze(1)
-                corr_term = torch.exp(torch.complex(torch.zeros_like(phi_corr), phi_corr))
-                sig_patch = signal * corr_term.to(signal.dtype)
+                sig_patch, P_patch = self._apply_scp_shift(signal, F_hz, P_vecs_orig, u_c, r_c, uIAX, uIAY)
                 
                 cos_theta, sin_theta = compute_look_components(P_patch, uIAX, uIAY)
                 F_cpm = 2.0 * F_hz / SPEED_OF_LIGHT
@@ -215,15 +227,14 @@ class PFAEngine:
                 
                 # Shared Grid Definitions
                 oversample = 1.5
-                from scipy.fft import next_fast_len
                 M_u = next_fast_len(int(math.ceil(p_N_u * oversample)))
                 M_r = next_fast_len(int(math.ceil(p_N_r * oversample)))
                 L_u = local_u_max - local_u_min
                 L_r = local_r_max - local_r_min
                 dK_u = p_N_u / (M_u * max(L_u, 1e-12))
                 dK_r = p_N_r / (M_r * max(L_r, 1e-12))
-                k_ctr_u = (Ku.min() + Ku.max()).item() / 2.0
-                k_ctr_r = (Kr.min() + Kr.max()).item() / 2.0
+                k_ctr_u = global_k_ctr_u if global_k_ctr_u is not None else (Ku.min() + Ku.max()).item() / 2.0
+                k_ctr_r = global_k_ctr_r if global_k_ctr_r is not None else (Kr.min() + Kr.max()).item() / 2.0
                 
                 # 1. Range CZT Resampling (K-space -> Cartesian K_r)
                 k_out_start_r = k_ctr_r - (M_r / 2.0) * dK_r
@@ -238,55 +249,54 @@ class PFAEngine:
                     k_start = kr_b[:, 0].unsqueeze(1)
                     k_step = ((kr_b[:, -1] - kr_b[:, 0]) / max(N_samples - 1, 1)).unsqueeze(1)
                     
-                    batch_out = czt_resample_kspace_1d(
+                    batch_out = self._czt_fn(
                         sig_b, 
                         k_start=k_start, 
                         k_step=k_step,
                         M_out=M_r,
                         k_out_start=k_out_start_r,
                         k_out_step=k_out_step_r,
-                        L_r=L_r,
+                        spatial_extent=L_r,
                         oversample=oversample
                     )
                     range_resampled[b:b+czt_batch_size, :] = batch_out
                 
+                # 2. Cross-Range CZT Resampling (Cartesian K_r -> Cartesian K_u)
+                cot_theta = Ku[:, N_samples // 2] / Kr[:, N_samples // 2]
+                
                 del sig_patch
                 del Kr
-                torch.cuda.empty_cache()
-                
-                # 2. Cross-Range CZT Resampling (Cartesian K_r -> Cartesian K_u)
-                Ku_center_bin = Ku[:, N_samples // 2]
                 del Ku
-                torch.cuda.empty_cache()
                 
                 k_out_start_u = k_ctr_u - (M_u / 2.0) * dK_u
                 k_out_step_u = dK_u
-                
-                ku_start = Ku_center_bin[0].unsqueeze(0)
-                ku_step = ((Ku_center_bin[-1] - Ku_center_bin[0]) / max(N_pulses - 1, 1)).unsqueeze(0)
                 
                 grid_2d = torch.zeros((M_u, M_r), dtype=range_resampled.dtype, device=self.device)
                 
                 for b in range(0, M_r, czt_batch_size):
                     range_batch = range_resampled[:, b:b + czt_batch_size]
                     
+                    # Compute Cartesian K_r for this batch
+                    Kr_cart_b = k_out_start_r + torch.arange(b, b + range_batch.shape[1], device=self.device) * dK_r
+                    batch_ku_start = (Kr_cart_b * cot_theta[0]).unsqueeze(1)
+                    batch_ku_step = (Kr_cart_b * ((cot_theta[-1] - cot_theta[0]) / max(N_pulses - 1, 1))).unsqueeze(1)
+                    
                     # Transpose to (batch, N_pulses) so CZT operates on the N_pulses dimension
                     range_batch_t = range_batch.T
                     
-                    batch_out_t = czt_resample_kspace_1d(
+                    batch_out_t = self._czt_fn(
                         range_batch_t, 
-                        k_start=ku_start, 
-                        k_step=ku_step,
+                        k_start=batch_ku_start, 
+                        k_step=batch_ku_step,
                         M_out=M_u,
                         k_out_start=k_out_start_u,
                         k_out_step=k_out_step_u,
-                        L_r=L_u,
+                        spatial_extent=L_u,
                         oversample=oversample
                     )
                     grid_2d[:, b:b+range_batch.shape[1]] = batch_out_t.T
                 
                 del range_resampled
-                torch.cuda.empty_cache()
                 
                 # 3. 2D IFFT (No deconvolution needed since CZT is exact interpolation)
                 grid_shifted = torch.fft.ifftshift(grid_2d)
@@ -314,23 +324,16 @@ class PFAEngine:
         r_min: float,
         r_max: float,
         N_u: int,
-        N_r: int
+        N_r: int,
+        global_k_ctr_u: float = None,
+        global_k_ctr_r: float = None
     ) -> torch.Tensor:
         """Processes a single CPHD channel using a Hybrid approach: 1D CZT in Range, 1D NUFFT in Cross-Range."""
         signal = ch_data.signal.to(self.device)
         pvp = ch_data.pvp
         N_pulses, N_samples = signal.shape
 
-        if "TxFMRate" in pvp:
-            gamma = torch.as_tensor(pvp["TxFMRate"], dtype=torch.float64, device=self.device)
-            if "SC0" in pvp and "SCSS" in pvp:
-                sc0 = torch.as_tensor(pvp["SC0"], dtype=torch.float64, device=self.device)
-                scss = torch.as_tensor(pvp["SCSS"], dtype=torch.float64, device=self.device)
-                k_idx = torch.arange(N_samples, dtype=torch.float64, device=self.device)
-                F_hz = sc0.unsqueeze(1) + scss.unsqueeze(1) * k_idx.unsqueeze(0)
-                rvp_phase = torch.pi * (F_hz ** 2) / gamma.unsqueeze(1)
-                rvp_term = torch.exp(torch.complex(torch.zeros_like(rvp_phase), rvp_phase))
-                signal = signal * rvp_term.to(signal.dtype)
+        signal = self._deskew_rvp(signal, pvp, N_samples)
 
         num_patches = max(1, self.config.num_subpatches)
         subpatch_size_u = int(np.ceil(N_u / num_patches))
@@ -341,25 +344,7 @@ class PFAEngine:
         P_vecs_orig = compute_look_vectors(pvp, device=self.device)
         F_hz = compute_fasttime_frequencies(pvp, N_samples, ch_data.domain_type, device=self.device)
         
-        if self.config.image_plane == "Slant":
-            raw_meta = self.reader.reader.cphd_meta
-            rg = raw_meta.ReferenceGeometry
-            srp = rg.SRP.get_array()
-            arp = rg.Monostatic.ARPPos.get_array()
-            arp_v = rg.Monostatic.ARPVel.get_array()
-            
-            p_vec = srp - arp
-            u_row = p_vec / np.linalg.norm(p_vec)
-            
-            u_v = arp_v / np.linalg.norm(arp_v)
-            u_col_unnorm = u_v - np.dot(u_v, u_row) * u_row
-            u_col = u_col_unnorm / np.linalg.norm(u_col_unnorm)
-            
-            uIAX = torch.as_tensor(u_col, dtype=torch.float64, device=self.device)
-            uIAY = torch.as_tensor(u_row, dtype=torch.float64, device=self.device)
-        else:
-            uIAX = torch.as_tensor(cphd_meta.uIAX, dtype=torch.float64, device=self.device)
-            uIAY = torch.as_tensor(cphd_meta.uIAY, dtype=torch.float64, device=self.device)
+        uIAX, uIAY = self._get_image_plane_vectors(cphd_meta)
 
         u_edges = np.linspace(u_min, u_max, N_u + 1)
         r_edges = np.linspace(r_min, r_max, N_r + 1)
@@ -396,15 +381,14 @@ class PFAEngine:
                 
                 # Shared Grid Definitions
                 oversample = 1.5
-                from scipy.fft import next_fast_len
                 M_u = next_fast_len(int(math.ceil(p_N_u * oversample)))
                 M_r = next_fast_len(int(math.ceil(p_N_r * oversample)))
                 L_u = local_u_max - local_u_min
                 L_r = local_r_max - local_r_min
                 dK_u = p_N_u / (M_u * max(L_u, 1e-12))
                 dK_r = p_N_r / (M_r * max(L_r, 1e-12))
-                k_ctr_u = (Ku.min() + Ku.max()).item() / 2.0
-                k_ctr_r = (Kr.min() + Kr.max()).item() / 2.0
+                k_ctr_u = global_k_ctr_u if global_k_ctr_u is not None else (Ku.min() + Ku.max()).item() / 2.0
+                k_ctr_r = global_k_ctr_r if global_k_ctr_r is not None else (Kr.min() + Kr.max()).item() / 2.0
                 
                 # 1. Range CZT Resampling (K-space -> Cartesian K_r)
                 k_out_start_r = k_ctr_r - (M_r / 2.0) * dK_r
@@ -419,20 +403,19 @@ class PFAEngine:
                     k_start = kr_b[:, 0].unsqueeze(1)
                     k_step = ((kr_b[:, -1] - kr_b[:, 0]) / max(N_samples - 1, 1)).unsqueeze(1)
                     
-                    batch_out = czt_resample_kspace_1d(
+                    batch_out = self._czt_fn(
                         sig_b, 
                         k_start=k_start, 
                         k_step=k_step,
                         M_out=M_r,
                         k_out_start=k_out_start_r,
                         k_out_step=k_out_step_r,
-                        L_r=L_r,
+                        spatial_extent=L_r,
                         oversample=oversample
                     )
                     range_resampled[b:b+czt_batch_size, :] = batch_out
                 
                 del sig_patch
-                torch.cuda.empty_cache()
                 
                 # 2. Cross-Range NUFFT Gridding (Cartesian K_r -> Cartesian K_u)
                 cot_theta = Ku[:, N_samples//2] / Kr[:, N_samples//2]
@@ -441,7 +424,6 @@ class PFAEngine:
                 
                 del Ku
                 del Kr
-                torch.cuda.empty_cache()
                 
                 nufft_batch_size = self.config.czt_batch_size
                 grid_2d = torch.zeros((M_u, M_r), dtype=range_resampled.dtype, device=self.device)
@@ -462,7 +444,6 @@ class PFAEngine:
                     grid_2d[:, b:b+nufft_batch_size] = chunk_grid
                 
                 del range_resampled
-                torch.cuda.empty_cache()
                 
                 # 3. 2D IFFT and Deconvolution
                 grid_shifted = torch.fft.ifftshift(grid_2d)
@@ -500,23 +481,16 @@ class PFAEngine:
         r_min: float,
         r_max: float,
         N_u: int,
-        N_r: int
+        N_r: int,
+        global_k_ctr_u: float = None,
+        global_k_ctr_r: float = None
     ) -> torch.Tensor:
         """Processes a single CPHD channel using 2D PyTorch NUFFT gridding."""
         signal = ch_data.signal.to(self.device)
         pvp = ch_data.pvp
         N_pulses, N_samples = signal.shape
 
-        if "TxFMRate" in pvp:
-            gamma = torch.as_tensor(pvp["TxFMRate"], dtype=torch.float64, device=self.device)
-            if "SC0" in pvp and "SCSS" in pvp:
-                sc0 = torch.as_tensor(pvp["SC0"], dtype=torch.float64, device=self.device)
-                scss = torch.as_tensor(pvp["SCSS"], dtype=torch.float64, device=self.device)
-                k_idx = torch.arange(N_samples, dtype=torch.float64, device=self.device)
-                F_hz = sc0.unsqueeze(1) + scss.unsqueeze(1) * k_idx.unsqueeze(0)
-                rvp_phase = torch.pi * (F_hz ** 2) / gamma.unsqueeze(1)
-                rvp_term = torch.exp(torch.complex(torch.zeros_like(rvp_phase), rvp_phase))
-                signal = signal * rvp_term.to(signal.dtype)
+        signal = self._deskew_rvp(signal, pvp, N_samples)
 
         num_patches = max(1, self.config.num_subpatches)
         subpatch_size_u = int(np.ceil(N_u / num_patches))
@@ -527,25 +501,7 @@ class PFAEngine:
         P_vecs_orig = compute_look_vectors(pvp, device=self.device)
         F_hz = compute_fasttime_frequencies(pvp, N_samples, ch_data.domain_type, device=self.device)
         
-        if self.config.image_plane == "Slant":
-            raw_meta = self.reader.reader.cphd_meta
-            rg = raw_meta.ReferenceGeometry
-            srp = rg.SRP.get_array()
-            arp = rg.Monostatic.ARPPos.get_array()
-            arp_v = rg.Monostatic.ARPVel.get_array()
-            
-            p_vec = srp - arp
-            u_row = p_vec / np.linalg.norm(p_vec)
-            
-            u_v = arp_v / np.linalg.norm(arp_v)
-            u_col_unnorm = u_v - np.dot(u_v, u_row) * u_row
-            u_col = u_col_unnorm / np.linalg.norm(u_col_unnorm)
-            
-            uIAX = torch.as_tensor(u_col, dtype=torch.float64, device=self.device)
-            uIAY = torch.as_tensor(u_row, dtype=torch.float64, device=self.device)
-        else:
-            uIAX = torch.as_tensor(cphd_meta.uIAX, dtype=torch.float64, device=self.device)
-            uIAY = torch.as_tensor(cphd_meta.uIAY, dtype=torch.float64, device=self.device)
+        uIAX, uIAY = self._get_image_plane_vectors(cphd_meta)
 
         u_edges = np.linspace(u_min, u_max, N_u + 1)
         r_edges = np.linspace(r_min, r_max, N_r + 1)
@@ -579,7 +535,7 @@ class PFAEngine:
                 local_r_min, local_r_max = p_r_min - r_c, p_r_max - r_c
                 p_N_u, p_N_r = end_u - i_u, end_r - i_r
                 
-                patch_img = nufft_2d_type1_torch(
+                patch_img = self._nufft_2d_fn(
                     signal=sig_patch,
                     ku=Ku,
                     kr=Kr,
@@ -617,20 +573,38 @@ class PFAEngine:
         for pol_key, ch_list in pol_groups.items():
             tx_pol, rcv_pol = pol_key
 
-            # Determine spatial bounds from first channel
+            # Determine global spatial bounds and center frequencies from all channels
+            global_ku_min, global_ku_max = float('inf'), float('-inf')
+            global_kr_min, global_kr_max = float('inf'), float('-inf')
+            
+            for ch_data in ch_list:
+                Ku_sample, Kr_sample = compute_kspace(
+                    ch_data.pvp,
+                    cphd_meta.uIAX,
+                    cphd_meta.uIAY,
+                    ch_data.signal.shape[1],
+                    ch_data.domain_type,
+                    device=self.device
+                )
+                global_ku_min = min(global_ku_min, Ku_sample.min().item())
+                global_ku_max = max(global_ku_max, Ku_sample.max().item())
+                global_kr_min = min(global_kr_min, Kr_sample.min().item())
+                global_kr_max = max(global_kr_max, Kr_sample.max().item())
+            
             first_ch = ch_list[0]
-            Ku_sample, Kr_sample = compute_kspace(
-                first_ch.pvp,
-                cphd_meta.uIAX,
-                cphd_meta.uIAY,
-                first_ch.signal.shape[1],
-                first_ch.domain_type,
-                device=self.device
-            )
-
+            N_pulses = first_ch.signal.shape[0]
+            N_samples = first_ch.signal.shape[1]
+            dummy_ku = torch.full((N_pulses, N_samples), global_ku_min, device=self.device, dtype=torch.float64)
+            dummy_kr = torch.full((N_pulses, N_samples), global_kr_min, device=self.device, dtype=torch.float64)
+            dummy_ku[0, 0] = global_ku_max
+            dummy_kr[0, 0] = global_kr_max
+            
             u_min, u_max, r_min, r_max, N_u, N_r = self._determine_spatial_bounds(
-                cphd_meta, Ku_sample, Kr_sample
+                cphd_meta, dummy_ku, dummy_kr
             )
+            
+            global_k_ctr_u = (global_ku_min + global_ku_max) / 2.0
+            global_k_ctr_r = (global_kr_min + global_kr_max) / 2.0
 
             # Process each channel in group
             channel_images = []
@@ -639,11 +613,11 @@ class PFAEngine:
                 # Strict mode selection
                 mode = self.config.mode
                 if mode == "czt":
-                    img = self.process_channel_czt(ch_data, cphd_meta, u_min, u_max, r_min, r_max, N_u, N_r)
+                    img = self.process_channel_czt(ch_data, cphd_meta, u_min, u_max, r_min, r_max, N_u, N_r, global_k_ctr_u, global_k_ctr_r)
                 elif mode == "nufft":
-                    img = self.process_channel_nufft(ch_data, cphd_meta, u_min, u_max, r_min, r_max, N_u, N_r)
+                    img = self.process_channel_nufft(ch_data, cphd_meta, u_min, u_max, r_min, r_max, N_u, N_r, global_k_ctr_u, global_k_ctr_r)
                 elif mode == "hybrid":
-                    img = self.process_channel_hybrid(ch_data, cphd_meta, u_min, u_max, r_min, r_max, N_u, N_r)
+                    img = self.process_channel_hybrid(ch_data, cphd_meta, u_min, u_max, r_min, r_max, N_u, N_r, global_k_ctr_u, global_k_ctr_r)
                 else:
                     raise ValueError(f"Unsupported mode: {mode}")
 

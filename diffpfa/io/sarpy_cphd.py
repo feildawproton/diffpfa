@@ -61,6 +61,11 @@ class SarpyCPHDReader(BaseCPHDReader):
         if hasattr(cphd_meta, "CollectionID") and hasattr(cphd_meta.CollectionID, "RadarMode"):
             radar_mode = getattr(cphd_meta.CollectionID.RadarMode, "ModeType", None)
 
+        rg = getattr(cphd_meta, "ReferenceGeometry", None)
+        srp_ecf = rg.SRP.get_array() if rg and getattr(rg, "SRP", None) else None
+        arp_pos = rg.Monostatic.ARPPos.get_array() if rg and getattr(rg, "Monostatic", None) and getattr(rg.Monostatic, "ARPPos", None) else None
+        arp_vel = rg.Monostatic.ARPVel.get_array() if rg and getattr(rg, "Monostatic", None) and getattr(rg.Monostatic, "ARPVel", None) else None
+
         self._meta_cache = CPHDMetadata(
             domain_type=domain_type,
             sgn=sgn,
@@ -73,6 +78,9 @@ class SarpyCPHDReader(BaseCPHDReader):
             extended_area=ext_area,
             collection_start=coll_start,
             radar_mode=radar_mode,
+            srp_ecf=srp_ecf,
+            arp_pos_coa=arp_pos,
+            arp_vel_coa=arp_vel,
             raw_meta=cphd_meta,
         )
         return self._meta_cache
@@ -106,8 +114,9 @@ class SarpyCPHDReader(BaseCPHDReader):
         sig_tensor = torch.from_numpy(sig_np.copy()).cfloat()
 
         # Polarization extraction
-        tx_pol = getattr(params, "TxPol", None)
-        rcv_pol = getattr(params, "RcvPol", None)
+        pol = getattr(params, "Polarization", None)
+        tx_pol = getattr(pol, "TxPol", None) if pol is not None else None
+        rcv_pol = getattr(pol, "RcvPol", None) if pol is not None else None
 
         if tx_pol is None and "TxPol" in pvp_dict:
             tx_pol = str(pvp_dict["TxPol"][0])

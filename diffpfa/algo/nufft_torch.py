@@ -67,11 +67,8 @@ def nufft_grid_1d(
         
         wx = kaiser_bessel_kernel_1d((gx_idx - ix.to(real_dtype)), J=J, beta=beta)
         
-        grid.index_put_(
-            (ix[mask], col_idx[mask]),
-            signal[mask] * wx[mask],
-            accumulate=True
-        )
+        flat_idx = ix[mask] * B + col_idx[mask]
+        grid.view(-1).index_add_(0, flat_idx, signal[mask] * wx[mask])
         
     return grid
 
@@ -248,12 +245,9 @@ def nufft_2d_type1_torch(
                 wr = kaiser_bessel_kernel_1d((gr_idx - ir.to(real_dtype)), J=J, beta=beta)
                 w_2d = (wu * wr).to(complex_dtype)
 
-                # Scatter add weighted signal values into Cartesian grid
-                grid.index_put_(
-                    (iu[mask], ir[mask]),
-                    sig_b[mask] * w_2d[mask],
-                    accumulate=True
-                )
+                # Scatter add weighted signal values into Cartesian grid (flattened for index_add_)
+                flat_idx = iu[mask] * M_r + ir[mask]
+                grid.view(-1).index_add_(0, flat_idx, sig_b[mask] * w_2d[mask])
 
     # 2D Inverse FFT to image domain
     # Shift center before IFFT

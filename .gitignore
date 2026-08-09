@@ -17,3 +17,10 @@ mypyenv/
 .vscode/
 .idea/
 *.swp
+
+# Data files and simulation outputs
+*.nitf
+*.cphd
+*.png
+output/
+simulation/output/
