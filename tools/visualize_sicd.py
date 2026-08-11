@@ -11,7 +11,7 @@ def visualize(filename):
     # Read the complex data from the first image segment
     # PFA algorithm outputs (Cross-Range, Range)
     # Transpose so Cross-Range is horizontal (X-axis) and Range is vertical (Y-axis)
-    data = reader[:].T
+    data = reader[:]
     
     from sarpy.visualization.remap import density
     

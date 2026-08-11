@@ -11,11 +11,11 @@ from diffpfa.constants import SPEED_OF_LIGHT
 from diffpfa.io.base import BaseCPHDReader, CPHDMetadata, CPHDChannelData, BaseSICDWriter, SICDImagePayload
 
 class MockSteppedChirpCPHDReader(BaseCPHDReader):
-    def __init__(self):
-        super().__init__("mock_stepped.cphd")
+    def __init__(self, file_path="mock_stepped.cphd"):
+        super().__init__(file_path)
         
-        # 64 pulse pairs (128 total pulses, but 64 per subband)
-        self.N_pulse_pairs = 64
+        # 256 pulse pairs (512 total pulses, but 256 per subband) for a square output
+        self.N_pulse_pairs = 256
         self.N_samples = 256
         
         self.srp_ecf = np.array([0.0, 0.0, 0.0])
@@ -53,10 +53,10 @@ class MockSteppedChirpCPHDReader(BaseCPHDReader):
         self.f_step = self.fxbw / self.N_samples
         
         self.channels = [
-            {"id": "Ch1_VV_Low", "tx": "V", "rcv": "V", "pos": self.pos_1, "fxc": self.fxc_1, "f_start": self.f_start_1},
-            {"id": "Ch2_VH_Low", "tx": "V", "rcv": "H", "pos": self.pos_1, "fxc": self.fxc_1, "f_start": self.f_start_1},
-            {"id": "Ch3_VV_High", "tx": "V", "rcv": "V", "pos": self.pos_2, "fxc": self.fxc_2, "f_start": self.f_start_2},
-            {"id": "Ch4_VH_High", "tx": "V", "rcv": "H", "pos": self.pos_2, "fxc": self.fxc_2, "f_start": self.f_start_2},
+            {"id": "Ch1_VV_Low", "tx": "V", "rcv": "V", "pos": self.pos_1, "fxc": self.fxc_1, "f_start": self.f_start_1, "t": t_1},
+            {"id": "Ch2_VH_Low", "tx": "V", "rcv": "H", "pos": self.pos_1, "fxc": self.fxc_1, "f_start": self.f_start_1, "t": t_1},
+            {"id": "Ch3_VV_High", "tx": "V", "rcv": "V", "pos": self.pos_2, "fxc": self.fxc_2, "f_start": self.f_start_2, "t": t_2},
+            {"id": "Ch4_VH_High", "tx": "V", "rcv": "H", "pos": self.pos_2, "fxc": self.fxc_2, "f_start": self.f_start_2, "t": t_2},
         ]
         
     def get_metadata(self) -> CPHDMetadata:
@@ -87,23 +87,33 @@ class MockSteppedChirpCPHDReader(BaseCPHDReader):
         freqs = ch_info["f_start"] + np.arange(self.N_samples) * self.f_step
         
         # Target at SRP has 0 phase after motion compensation.
-        # We inject a synthetic phase shift to test the channel alignment logic.
+        # We model the actual physics: the deterministic phase drift between sub-bands
+        # over the difference in receive times needs to be injected so the engine can correct it.
         phase = np.zeros((self.N_pulse_pairs, self.N_samples))
         
-        if "High" in ch_info["id"]:
-            phase += np.pi / 3.0  # Synthetic constant phase error on high band
-            
+        # Inject the deterministic offset that the engine's new analytical correction expects to fix!
+        # The engine will subtract this. We ADD it so that when the engine subtracts it, phase becomes 0.
+        t_arr = ch_info["t"]
+        t_ref = self.channels[0]["t"]
+        tau = t_arr - t_ref
+        fc_global = (self.f_start_1 + (self.f_start_2 + self.fxbw)) / 2.0
+        phase += 2.0 * np.pi * (fc_global - ch_info["fxc"]) * tau[:, None]
+        
         if ch_info["rcv"] == "H":
-            phase += np.pi / 4.0  # Synthetic polarization phase offset
+            phase += np.pi / 4.0  # Synthetic polarization phase offset (should remain in VH)
             
         signal = torch.tensor(np.exp(1j * phase), dtype=torch.complex64)
+        
+        tau_roundtrip = 2.0 * dist / SPEED_OF_LIGHT
         
         pvp = {
             "TxPos": pos,
             "RcvPos": pos,
             "SRPPos": np.tile(self.srp_ecf, (self.N_pulse_pairs, 1)),
             "SC0": np.full(self.N_pulse_pairs, ch_info["f_start"]),
-            "SCSS": np.full(self.N_pulse_pairs, self.f_step)
+            "SCSS": np.full(self.N_pulse_pairs, self.f_step),
+            "TxTime": t_arr,
+            "RcvTime": t_arr + tau_roundtrip
         }
         
         return CPHDChannelData(
@@ -120,27 +130,29 @@ class MockSteppedChirpCPHDReader(BaseCPHDReader):
 
 
 class TrackingSICDWriter(BaseSICDWriter):
-    def __init__(self):
+    def __init__(self, mode):
         from diffpfa.io import SICDWriter
         self.real_writer = SICDWriter(backend="sarkit")
         self.payloads = []
+        self.mode = mode
         
     def write_sicd(self, output_path: str, payload: SICDImagePayload, cphd_meta: CPHDMetadata) -> str:
         self.payloads.append(payload)
-        print(f"  [TrackingWriter] Captured and saving output for {payload.tx_pol}/{payload.rcv_pol} to {output_path}")
-        return self.real_writer.write_sicd(output_path, payload, cphd_meta)
+        out_path = output_path.replace('.nitf', f'_{self.mode}.nitf')
+        print(f"  [TrackingWriter] Captured and saving output for {payload.tx_pol}/{payload.rcv_pol} to {out_path}")
+        return self.real_writer.write_sicd(out_path, payload, cphd_meta)
         
     def finalize(self): pass
     def close(self): pass
 
 
-def run_simulation():
+def run_simulation(mode="cztnufft"):
     reader = MockSteppedChirpCPHDReader()
-    writer = TrackingSICDWriter()
+    writer = TrackingSICDWriter(mode)
     
     device = "cuda" if torch.cuda.is_available() else "cpu"
     config = PFAConfig(
-        mode="cztnufft",
+        mode=mode,
         device=device,
         num_subpatches=1,
         align_subchannels=True,
@@ -153,54 +165,53 @@ def run_simulation():
     
     vv_combined = next(p for p in writer.payloads if p.tx_pol == "V" and p.rcv_pol == "V" and p.channel_id is None)
     vv_ch1 = next(p for p in writer.payloads if p.channel_id == "Ch1_VV_Low")
+    vv_ch3 = next(p for p in writer.payloads if p.channel_id == "Ch3_VV_High")
     vh_combined = next(p for p in writer.payloads if p.tx_pol == "V" and p.rcv_pol == "H" and p.channel_id is None)
     vh_ch2 = next(p for p in writer.payloads if p.channel_id == "Ch2_VH_Low")
     
     img_combined_vv = torch.abs(vv_combined.complex_image).cpu().numpy()
-    img_single_vv = torch.abs(vv_ch1.complex_image).cpu().numpy()
+    img_single1_vv = torch.abs(vv_ch1.complex_image).cpu().numpy()
+    img_single2_vv = torch.abs(vv_ch3.complex_image).cpu().numpy()
     img_combined_vh = torch.abs(vh_combined.complex_image).cpu().numpy()
     img_single_vh = torch.abs(vh_ch2.complex_image).cpu().numpy()
     
     center_u = img_combined_vv.shape[0] // 2
-    slice_combined_vv = img_combined_vv[center_u, :]
-    slice_single_vv = img_single_vv[center_u, :]
-    slice_combined_vh = img_combined_vh[center_u, :]
-    slice_single_vh = img_single_vh[center_u, :]
+    center_r = img_combined_vv.shape[1] // 2
     
-    slice_combined_vv /= slice_combined_vv.max()
-    slice_single_vv /= slice_single_vv.max()
-    slice_combined_vh /= slice_combined_vh.max()
-    slice_single_vh /= slice_single_vh.max()
+    # Range slices (fix cross-range u)
+    slice_r_combined_vv = img_combined_vv[center_u, :]
+    slice_r_single1_vv = img_single1_vv[center_u, :]
+    slice_r_single2_vv = img_single2_vv[center_u, :]
+    slice_r_combined_vh = img_combined_vh[center_u, :]
+    slice_r_single_vh = img_single_vh[center_u, :]
     
-    # Zoom in around the peak
-    center_r_s_vv = np.argmax(slice_single_vv)
-    center_r_c_vv = np.argmax(slice_combined_vv)
-    center_r_s_vh = np.argmax(slice_single_vh)
-    center_r_c_vh = np.argmax(slice_combined_vh)
+    # Cross-Range slices (fix range r)
+    slice_u_combined_vv = img_combined_vv[:, center_r]
+    slice_u_single1_vv = img_single1_vv[:, center_r]
+    slice_u_single2_vv = img_single2_vv[:, center_r]
+    
+    slice_r_combined_vv /= slice_r_combined_vv.max()
+    slice_r_single1_vv /= slice_r_single1_vv.max()
+    slice_r_single2_vv /= slice_r_single2_vv.max()
+    slice_r_combined_vh /= slice_r_combined_vh.max()
+    slice_r_single_vh /= slice_r_single_vh.max()
+    
+    slice_u_combined_vv /= slice_u_combined_vv.max()
+    slice_u_single1_vv /= slice_u_single1_vv.max()
+    slice_u_single2_vv /= slice_u_single2_vv.max()
+    
+    # Zoom in around the peak for metrics
+    center_r_s_vv = np.argmax(slice_r_single1_vv)
+    center_r_c_vv = np.argmax(slice_r_combined_vv)
+    center_r_s_vh = np.argmax(slice_r_single_vh)
+    center_r_c_vh = np.argmax(slice_r_combined_vh)
     window = 10
     
-    zoom_single_vv = slice_single_vv[center_r_s_vv - window : center_r_s_vv + window + 1]
-    zoom_combined_vv = slice_combined_vv[center_r_c_vv - window : center_r_c_vv + window + 1]
-    zoom_single_vh = slice_single_vh[center_r_s_vh - window : center_r_s_vh + window + 1]
-    zoom_combined_vh = slice_combined_vh[center_r_c_vh - window : center_r_c_vh + window + 1]
+    zoom_single_vv = slice_r_single1_vv[center_r_s_vv - window : center_r_s_vv + window + 1]
+    zoom_combined_vv = slice_r_combined_vv[center_r_c_vv - window : center_r_c_vv + window + 1]
+    zoom_single_vh = slice_r_single_vh[center_r_s_vh - window : center_r_s_vh + window + 1]
+    zoom_combined_vh = slice_r_combined_vh[center_r_c_vh - window : center_r_c_vh + window + 1]
     
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6), sharey=True)
-    
-    ax1.plot(range(-window, window + 1), zoom_single_vv, color='blue', marker='o')
-    ax1.set_title('VV Single Channel (250 MHz) - Zoomed')
-    ax1.set_xlabel('Relative Range Bin')
-    ax1.set_ylabel('Normalized Magnitude')
-    ax1.grid(True)
-    
-    ax2.plot(range(-window, window + 1), zoom_combined_vv, color='red', marker='x')
-    ax2.set_title('VV Combined Channels (500 MHz) - Zoomed')
-    ax2.set_xlabel('Relative Range Bin')
-    ax2.grid(True)
-    
-    plt.tight_layout()
-    plt.savefig('simulation/output/vv_resolution_comparison.png')
-    
-    # Calculate empirical energy concentration
     energy_s_vv = np.sum(zoom_single_vv**2)
     energy_c_vv = np.sum(zoom_combined_vv**2)
     core_s_vv = np.sum(zoom_single_vv[window-1:window+2]**2) / energy_s_vv
@@ -239,20 +250,62 @@ def run_simulation():
             
         return true_right - true_left
 
-    fwhm_s_vv = get_fwhm(slice_single_vv)
-    fwhm_c_vv = get_fwhm(slice_combined_vv)
-    fwhm_s_vh = get_fwhm(slice_single_vh)
-    fwhm_c_vh = get_fwhm(slice_combined_vh)
+    print("Max VV Single:", np.max(img_single1_vv))
+    print("Max VV Combined:", np.max(img_combined_vv))
+
+    fwhm_s_vv = get_fwhm(slice_r_single1_vv)
+    fwhm_c_vv = get_fwhm(slice_r_combined_vv)
+    fwhm_s_vh = get_fwhm(slice_r_single_vh)
+    fwhm_c_vh = get_fwhm(slice_r_combined_vh)
     
-    print(f"\nVV FWHM (pixels) - Single Channel: {fwhm_s_vv}")
-    print(f"VV FWHM (pixels) - Combined: {fwhm_c_vv}")
-    print(f"VH FWHM (pixels) - Single Channel: {fwhm_s_vh}")
-    print(f"VH FWHM (pixels) - Combined: {fwhm_c_vh}")
+    fwhm_u_s_vv = get_fwhm(slice_u_single1_vv)
+    fwhm_u_c_vv = get_fwhm(slice_u_combined_vv)
+    
+    print(f"\nVV FWHM (pixels) - Single Channel [Range]: {fwhm_s_vv}")
+    print(f"VV FWHM (pixels) - Combined [Range]: {fwhm_c_vv}")
+    print(f"VH FWHM (pixels) - Single Channel [Range]: {fwhm_s_vh}")
+    print(f"VH FWHM (pixels) - Combined [Range]: {fwhm_c_vh}")
+    
+    print(f"\nVV FWHM (pixels) - Single Channel [Cross-Range]: {fwhm_u_s_vv}")
+    print(f"VV FWHM (pixels) - Combined [Cross-Range]: {fwhm_u_c_vv}")
     
     if fwhm_c_vv < fwhm_s_vv * 0.6 and fwhm_c_vh < fwhm_s_vh * 0.6:
         print("\nSUCCESS: Combined resolution is sharper than single channel for both polarizations!")
     else:
         print("\nWARNING: Coherent combination did not achieve expected resolution improvement.")
 
+    # 2-Panel Plot: Range and Cross-Range Slices
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+    
+    # Panel 1: Range slice
+    peak_r = np.argmax(slice_r_combined_vv)
+    ax1.plot(slice_r_single1_vv, label="Subband 1 (VV_Low)", linewidth=2, color='blue', alpha=0.7)
+    ax1.plot(slice_r_single2_vv, label="Subband 2 (VV_High)", linewidth=2, color='green', alpha=0.7)
+    ax1.plot(slice_r_combined_vv, label="Coherent Combined", linewidth=2, color='red', linestyle='--')
+    ax1.set_title(f"VV IPR Range Slice - {mode}")
+    ax1.set_xlabel("Pixels")
+    ax1.set_ylabel("Normalized Magnitude")
+    ax1.legend()
+    ax1.grid(True)
+    ax1.set_xlim(peak_r - 20, peak_r + 20)
+    
+    # Panel 2: Cross-Range slice
+    peak_u = np.argmax(slice_u_combined_vv)
+    ax2.plot(slice_u_single1_vv, label="Subband 1 (VV_Low)", linewidth=2, color='blue', alpha=0.7)
+    ax2.plot(slice_u_single2_vv, label="Subband 2 (VV_High)", linewidth=2, color='green', alpha=0.7)
+    ax2.plot(slice_u_combined_vv, label="Coherent Combined", linewidth=2, color='red', linestyle='--')
+    ax2.set_title(f"VV IPR Cross-Range Slice - {mode}")
+    ax2.set_xlabel("Pixels")
+    ax2.set_ylabel("Normalized Magnitude")
+    ax2.legend()
+    ax2.grid(True)
+    ax2.set_xlim(peak_u - 20, peak_u + 20)
+    
+    plt.tight_layout()
+    plt.savefig(f"simulation/output/ipr_slice_{mode}.png")
+    plt.close()
+
 if __name__ == '__main__':
-    run_simulation()
+    for m in ["cztnufft", "nufft"]:
+        print(f"\\n{'='*50}\\nRunning simulation for mode: {m}\\n{'='*50}")
+        run_simulation(m)

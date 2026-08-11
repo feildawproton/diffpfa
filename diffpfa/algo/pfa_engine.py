@@ -2,6 +2,7 @@ from scipy.fft import next_fast_len
 from dataclasses import dataclass
 import os
 import math
+import time
 from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 import torch
@@ -468,8 +469,13 @@ class PFAEngine:
         with Timer("CPHD Read & Channel Grouping"):
             from concurrent.futures import ThreadPoolExecutor
             
+            reader_cls = self.reader.__class__
+            file_path = self.reader.file_path
+            
             def _load_ch(name):
-                return self.reader.read_channel(name)
+                # Instantiate a new reader per-worker to ensure file operations are thread/process safe
+                with reader_cls(file_path) as local_reader:
+                    return local_reader.read_channel(name)
                 
             max_workers = max(1, len(channel_names))
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -528,6 +534,16 @@ class PFAEngine:
                 mode = self.config.mode
                 combine_in_kspace = (self.config.num_subpatches == 1) and (mode == "cztnufft")
                 
+                # Analytical Phase Alignment (Center Frequency & Pulse Delay)
+                if "RcvTime" in ch_data.pvp and "RcvTime" in first_ch.pvp:
+                    tau = ch_data.pvp["RcvTime"] - first_ch.pvp["RcvTime"]
+                    fc_global = (cphd_meta.global_fx_min + cphd_meta.global_fx_max) / 2.0
+                    fc_channel = ch_data.fxc
+                    tau_tensor = torch.as_tensor(tau, dtype=torch.float64, device=ch_data.signal.device)
+                    phase_corr = -2.0 * torch.pi * (fc_global - fc_channel) * tau_tensor
+                    corr_term = torch.exp(1j * phase_corr).unsqueeze(1)
+                    ch_data.signal = ch_data.signal * corr_term.to(ch_data.signal.dtype)
+                
                 if mode == "nufft":
                     img = self.process_channel_nufft(ch_data, cphd_meta, u_min, u_max, r_min, r_max, N_u, N_r, global_k_ctr_u, global_k_ctr_r)
                 elif mode == "cztnufft":
@@ -539,40 +555,56 @@ class PFAEngine:
 
                 # Export debug channel image if requested
                 if self.config.debug_save_channels:
-                    # If returning kspace, we'd need to IFFT it to save it. For simplicity, we skip debug save when combine_in_kspace is True
                     if combine_in_kspace:
-                        pass # Skipping debug channels when combining in K-space
+                        _img_k = img.contiguous()
+                        _grid_sh = torch.fft.ifftshift(_img_k)
+                        _img_ov = torch.fft.ifft2(_grid_sh)
+                        _M_u, _M_r = _img_ov.shape
+                        _img_ov.mul_(_M_u * _M_r)
+                        _img_sh = torch.fft.fftshift(_img_ov)
+                        
+                        _beta = 13.9086
+                        _J = 6
+                        _grid_u = (torch.arange(_M_u, device=self.device, dtype=torch.float64) - _M_u / 2.0) / _M_u
+                        _deconv_u = torch.i0(torch.sqrt(torch.clamp(torch.tensor(_beta, dtype=torch.float64, device=self.device)**2 - (math.pi * _J * _grid_u)**2, min=1e-12)))
+                        _img_dec = _img_sh / (_deconv_u.unsqueeze(1) + 1e-12)
+                        
+                        _start_u = (_M_u - N_u) // 2
+                        _start_r = (_M_r - N_r) // 2
+                        save_img = _img_dec[_start_u : _start_u + N_u, _start_r : _start_r + N_r]
                     else:
-                        dbg_name = f"SICD_U_{tx_pol}_{rcv_pol}_ch_{ch_data.identifier}.nitf"
-                        dbg_path = os.path.join(self.config.output_dir, dbg_name)
-    
-                        du = (u_max - u_min) / max(N_u, 1)
-                        dr = (r_max - r_min) / max(N_r, 1)
-                        local_Ku, local_Kr = compute_kspace(
-                            ch_data.pvp, cphd_meta.uIAX, cphd_meta.uIAY, ch_data.signal.shape[1], ch_data.domain_type, device=self.device
-                        )
-                        bw_u = (local_Ku.max() - local_Ku.min()).item()
-                        bw_r = (local_Kr.max() - local_Kr.min()).item()
-    
-                        payload = SICDImagePayload(
-                            complex_image=img,
-                            tx_pol=tx_pol,
-                            rcv_pol=rcv_pol,
-                            uIAX=cphd_meta.uIAX,
-                            uIAY=cphd_meta.uIAY,
-                            iarp_ecf=cphd_meta.iarp_ecf,
-                            line_spacing=du,
-                            sample_spacing=dr,
-                            first_line=u_min,
-                            first_sample=r_min,
-                            center_freq=(cphd_meta.global_fx_min + cphd_meta.global_fx_max) / 2.0,
-                            bandwidth_u=bw_u,
-                            bandwidth_r=bw_r,
-                            channel_id=ch_data.identifier,
-                        )
-    
-                        saved_path = self.writer.write_sicd(dbg_path, payload, cphd_meta)
-                        output_files.append(saved_path)
+                        save_img = img
+
+                    dbg_name = f"SICD_U_{tx_pol}_{rcv_pol}_ch_{ch_data.identifier}.nitf"
+                    dbg_path = os.path.join(self.config.output_dir, dbg_name)
+
+                    du = (u_max - u_min) / max(N_u, 1)
+                    dr = (r_max - r_min) / max(N_r, 1)
+                    local_Ku, local_Kr = compute_kspace(
+                        ch_data.pvp, cphd_meta.uIAX, cphd_meta.uIAY, ch_data.signal.shape[1], ch_data.domain_type, device=self.device
+                    )
+                    bw_u = (local_Ku.max() - local_Ku.min()).item()
+                    bw_r = (local_Kr.max() - local_Kr.min()).item()
+
+                    payload = SICDImagePayload(
+                        complex_image=save_img,
+                        tx_pol=tx_pol,
+                        rcv_pol=rcv_pol,
+                        uIAX=cphd_meta.uIAX,
+                        uIAY=cphd_meta.uIAY,
+                        iarp_ecf=cphd_meta.iarp_ecf,
+                        line_spacing=du,
+                        sample_spacing=dr,
+                        first_line=u_min,
+                        first_sample=r_min,
+                        center_freq=(cphd_meta.global_fx_min + cphd_meta.global_fx_max) / 2.0,
+                        bandwidth_u=bw_u,
+                        bandwidth_r=bw_r,
+                        channel_id=ch_data.identifier,
+                    )
+
+                    saved_path = self.writer.write_sicd(dbg_path, payload, cphd_meta)
+                    output_files.append(saved_path)
 
             # Combine sub-channels
             with Timer("Combine Sub-channels"):

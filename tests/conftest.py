@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 def synthetic_cphd_reader():
     """Returns a MockCPHDReader that generates an ideal synthetic point target."""
     class MockCPHDReader(BaseCPHDReader):
-        def __init__(self):
+        def __init__(self, *args, **kwargs):
             super().__init__("mock_file.cphd")
             self.N_pulses = 64
             self.N_samples = 128

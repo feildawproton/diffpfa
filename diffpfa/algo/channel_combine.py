@@ -30,15 +30,10 @@ def align_and_combine_channels(
     for c in range(1, len(channel_images)):
         curr_img = channel_images[c]
 
-        if align_phase:
-            # Cross-correlation peak phase estimation: <ref_img, curr_img*>
-            cross_corr = torch.sum(ref_img * torch.conj(curr_img))
-            delta_phi = torch.angle(cross_corr)
-
-            # Apply phase alignment rotation
-            curr_aligned = curr_img * torch.exp(1j * delta_phi.to(torch.complex64))
-        else:
-            curr_aligned = curr_img
+        # Note: Data-driven cross-correlation phase alignment is mathematically invalid for orthogonal 
+        # frequency sub-bands. Phase alignment is now performed analytically using PVP RcvTime metadata 
+        # in the PFA engine before gridding.
+        curr_aligned = curr_img
 
         aligned_images.append(curr_aligned)
 

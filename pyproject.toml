@@ -24,3 +24,8 @@ dev = ["pytest"]
 
 [project.scripts]
 diffpfa = "diffpfa.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["diffpfa*"]
+exclude = ["tests*", "simulation*", "tools*", "PI*"]

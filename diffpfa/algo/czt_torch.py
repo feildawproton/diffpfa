@@ -132,7 +132,7 @@ def czt_resample_kspace_1d(
     2. Spatial Domain back to K-space via CZT on conjugate.
     """
     N = signal.shape[-1]
-    N_spatial = int(N * oversample)
+    N_spatial = max(int(N * oversample), M_out)
     
     # 1. K-space to Spatial Domain (Inverse Fourier-like)
     spatial = czt_1d_torch(

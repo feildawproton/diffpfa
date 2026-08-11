@@ -210,9 +210,10 @@ def nufft_2d_type1_torch(
     dK_r = grid_size_r / (M_r * max(L_r, 1e-12))
 
     # Convert non-uniform (ku, kr) coordinates to grid index units [0, M_u), [0, M_r)
-    # Center K-space around 0
-    k_ctr_u = (ku_flat.min() + ku_flat.max()) / 2.0
-    k_ctr_r = (kr_flat.min() + kr_flat.max()) / 2.0
+    # Center K-space around 0. Since Ku/Kr are already globally centered by the caller,
+    # we just use 0.0 unless the caller specifically passes a center.
+    k_ctr_u = 0.0
+    k_ctr_r = 0.0
 
     # 2D Cartesian K-space grid buffer
     grid = torch.zeros((M_u, M_r), dtype=complex_dtype, device=device)
