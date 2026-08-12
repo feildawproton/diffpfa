@@ -27,3 +27,6 @@ simulation/output/
 
 # Private
 PI/
+
+# package stuff
+*.egg-info*
