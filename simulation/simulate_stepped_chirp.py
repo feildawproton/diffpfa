@@ -157,7 +157,7 @@ def run_simulation(mode="cztnufft"):
         num_subpatches=1,
         align_subchannels=True,
         debug_save_channels=True,
-        output_dir="simulation/output"
+        output_dir="workspace/simulation/output"
     )
     
     engine = PFAEngine(reader, writer, config)
