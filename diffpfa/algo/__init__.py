@@ -9,12 +9,12 @@ from diffpfa.algo.channel.kspace import (
     compute_look_vectors,
 )
 '''
-from diffpfa.algo.pfa_engine import PFAConfig, PFAEngine
+from diffpfa.algo.pfa_engine import PFAConfig, PFAEngine, align_and_combine_channels
 
 __all__ = [
     "PFAConfig",
     "PFAEngine",
-    #"align_and_combine_channels",
+    "align_and_combine_channels",
     #"compute_fasttime_frequencies",
     #"compute_kspace",
     #"compute_look_components",

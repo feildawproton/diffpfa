@@ -2,7 +2,7 @@ import math
 from typing import Tuple
 import numpy as np
 import torch
-
+from scipy.fft import next_fast_len
 
 def kaiser_bessel_kernel_1d(x: torch.Tensor, J: int = 6, beta: float = 13.9086) -> torch.Tensor:
     """
@@ -41,8 +41,7 @@ def nufft_grid_1d(
     real_dtype = torch.float64 if signal.dtype == torch.complex128 else torch.float32
     
     kx = kx.to(real_dtype)
-    
-    from scipy.fft import next_fast_len
+     
     M = next_fast_len(int(math.ceil(grid_size * oversample)))
     
     # 1. Calibrate grid scaling

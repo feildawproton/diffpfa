@@ -2,7 +2,6 @@ import math
 import numpy as np
 import torch
 
-
 def czt_1d_torch(
     x: torch.Tensor,
     M: int,

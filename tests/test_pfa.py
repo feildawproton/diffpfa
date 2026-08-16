@@ -8,16 +8,13 @@ import torch
 # Ensure project root is in sys.path when running script directly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from diffpfa.algo import (
-    PFAConfig,
-    PFAEngine,
-    align_and_combine_channels,
-    compute_kspace,
-    compute_look_components,
-    compute_look_vectors,
-    czt_1d_torch,
-    nufft_2d_type1_torch,
-)
+from diffpfa.algo import PFAConfig, PFAEngine, align_and_combine_channels
+
+from diffpfa.algo.channel.geometry_channel import compute_kspace, compute_look_vectors
+from diffpfa.algo.channel.patch.geometry_patch import compute_look_components
+from diffpfa.algo.channel.patch.czt_torch import czt_1d_torch
+from diffpfa.algo.channel.patch.nufft_torch import nufft_2d_type1_torch
+
 from diffpfa.io import CPHDReader, SICDWriter
 
 SAMPLE_CPHD_PATH = "/home/feildaw/data/2023-11-14-03-38-20_UMBRA-04_CPHD.cphd"

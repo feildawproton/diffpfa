@@ -22,13 +22,11 @@ def visualize(filename, mode):
         mag = 20*np.log10(np.abs(data))
         maxm = np.max(mag)
         minm = np.min(mag)
-        mag = (mag - minm) / (maxm - minm)
-        mag = mag * 255
-        mapped_image = mag.astype(np.int8)
+        mapped_image = (mag - minm) / (maxm - minm)
 
     print("Plotting image...")
     plt.figure(figsize=(10, 10))
-    plt.imshow(mapped_image, cmap='gray', origin='lower')
+    plt.imshow(mapped_image, cmap='viridis', origin='lower')
     # plt.colorbar(label='8-bit Density')
     plt.title(f'SICD Image: {filename}')
     plt.tight_layout()
