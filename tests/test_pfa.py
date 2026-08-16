@@ -97,7 +97,7 @@ def test_pfa_pipeline_nufft(tmp_path):
         mode="nufft",
         image_area_mode="ImageArea",
         #custom_image_area=(-10.0, 10.0, -10.0, 10.0),
-        output_dir="output/out_nufft",
+        output_dir="workspace/output/out_nufft",
         device="cuda",
         num_subpatches=1
     )
@@ -124,7 +124,7 @@ def test_pfa_pipeline_cztnufft(tmp_path):
     cfg_cztnufft = PFAConfig(
         mode="cztnufft",
         image_area_mode="ImageArea",
-        output_dir="output/out_cztnufft",
+        output_dir="workspace/output/out_cztnufft",
         device="cuda",
         num_subpatches=1
     )

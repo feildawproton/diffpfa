@@ -221,8 +221,7 @@ class PFAEngine:
             for ch_data in ch_list:
                 # Strict mode selection
                 mode = self.config.mode
-                combine_in_kspace = (self.config.num_subpatches == 1) and (mode == "cztnufft")
-                
+                                
                 # Analytical Phase Alignment (Center Frequency & Pulse Delay)
                 if "RcvTime" in ch_data.pvp and "RcvTime" in first_ch.pvp:
                     tau = ch_data.pvp["RcvTime"] - first_ch.pvp["RcvTime"]
@@ -262,8 +261,7 @@ class PFAEngine:
                                                     czt_batch_size = self.config.czt_batch_size,
                                                     num_subpatches = self.config.num_subpatches,
                                                     global_k_ctr_u = global_k_ctr_u,
-                                                    global_k_ctr_r = global_k_ctr_r,
-                                                    return_kspace = combine_in_kspace,
+                                                    global_k_ctr_r = global_k_ctr_r,    
                                                     image_plane = self.config.image_plane,
                                                     device = self.device) 
   
@@ -271,28 +269,10 @@ class PFAEngine:
                     raise ValueError(f"Unsupported mode: {mode}")
 
                 channel_images.append(img)
-
+ 
                 # Export debug channel image if requested
                 if self.config.debug_save_channels:
-                    if combine_in_kspace:
-                        _img_k = img.contiguous()
-                        _grid_sh = torch.fft.ifftshift(_img_k)
-                        _img_ov = torch.fft.ifft2(_grid_sh)
-                        _M_u, _M_r = _img_ov.shape
-                        _img_ov.mul_(_M_u * _M_r)
-                        _img_sh = torch.fft.fftshift(_img_ov)
-                        
-                        _beta = 13.9086
-                        _J = 6
-                        _grid_u = (torch.arange(_M_u, device=self.device, dtype=torch.float64) - _M_u / 2.0) / _M_u
-                        _deconv_u = torch.i0(torch.sqrt(torch.clamp(torch.tensor(_beta, dtype=torch.float64, device=self.device)**2 - (math.pi * _J * _grid_u)**2, min=1e-12)))
-                        _img_dec = _img_sh / (_deconv_u.unsqueeze(1) + 1e-12)
-                        
-                        _start_u = (_M_u - N_u) // 2
-                        _start_r = (_M_r - N_r) // 2
-                        save_img = _img_dec[_start_u : _start_u + N_u, _start_r : _start_r + N_r]
-                    else:
-                        save_img = img
+                    save_img = img
 
                     dbg_name = f"SICD_U_{tx_pol}_{rcv_pol}_ch_{ch_data.identifier}.nitf"
                     dbg_path = os.path.join(self.config.output_dir, dbg_name)
@@ -331,33 +311,7 @@ class PFAEngine:
                 align_phase=self.config.align_subchannels
             )
             
-            if combine_in_kspace:
-                # combined_img is currently in K-space. We must 2D IFFT it.
-                with torch.autograd.profiler.record_function("combined_ifft2"):
-                    combined_img = combined_img.contiguous()
-                    grid_shifted = torch.fft.ifftshift(combined_img)
-                    del combined_img
-                    img_oversampled = torch.fft.ifft2(grid_shifted)
-                    del grid_shifted
-                    
-                    M_u, M_r = img_oversampled.shape
-                    img_oversampled.mul_(M_u * M_r)
-                    img_shifted = torch.fft.fftshift(img_oversampled)
-                    del img_oversampled
-                    
-                    beta = 13.9086
-                    J = 6
-                    real_dtype = torch.float64
-                    grid_u_coords = (torch.arange(M_u, device=self.device, dtype=real_dtype) - M_u / 2.0) / M_u
-                    deconv_u = torch.i0(torch.sqrt(torch.clamp(torch.tensor(beta, dtype=real_dtype, device=self.device)**2 - (math.pi * J * grid_u_coords)**2, min=1e-12)))
-                    
-                    img_deconv = img_shifted / (deconv_u.unsqueeze(1) + 1e-12)
-                    
-                    start_u = (M_u - N_u) // 2
-                    start_r = (M_r - N_r) // 2
-                    
-                    combined_img = img_deconv[start_u : start_u + N_u, start_r : start_r + N_r]
-
+            
             # Write primary combined SICD-U file
             out_name = f"SICD_U_{tx_pol}_{rcv_pol}.nitf"
             out_path = os.path.join(self.config.output_dir, out_name)
