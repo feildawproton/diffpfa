@@ -14,9 +14,8 @@ class MockSteppedChirpCPHDReader(BaseCPHDReader):
     def __init__(self, file_path="mock_stepped.cphd"):
         super().__init__(file_path)
         
-        # 256 pulse pairs (512 total pulses, but 256 per subband) for a square output
-        self.N_pulse_pairs = 256
         self.N_samples = 256
+        self.N_pulse_pairs = self.N_samples # // 2
         
         self.srp_ecf = np.array([0.0, 0.0, 0.0])
         vel = 100.0  # m/s
@@ -71,8 +70,8 @@ class MockSteppedChirpCPHDReader(BaseCPHDReader):
             srp_ecf=self.srp_ecf,
             arp_pos_coa=self.arp_pos_coa,
             arp_vel_coa=self.arp_vel_coa,
-            line_spacing=0.1,
-            sample_spacing=0.1,
+            #line_spacing=0.1,
+            #sample_spacing=0.1,
             classification="UNCLASSIFIED"
         )
         
@@ -138,7 +137,10 @@ class TrackingSICDWriter(BaseSICDWriter):
         
     def write_sicd(self, output_path: str, payload: SICDImagePayload, cphd_meta: CPHDMetadata) -> str:
         self.payloads.append(payload)
-        out_path = output_path.replace('.nitf', f'_{self.mode}.nitf')
+        name = os.path.basename(output_path)
+        directory = os.path.dirname(os.path.abspath(output_path))
+        out_path = directory + '/' + self.mode + '/' + name
+        #out_path = output_path.output_path.replace('.nitf', f'_{self.mode}.nitf')
         print(f"  [TrackingWriter] Captured and saving output for {payload.tx_pol}/{payload.rcv_pol} to {out_path}")
         return self.real_writer.write_sicd(out_path, payload, cphd_meta)
         
@@ -302,7 +304,7 @@ def run_simulation(mode="cztnufft"):
     ax2.set_xlim(peak_u - 20, peak_u + 20)
     
     plt.tight_layout()
-    plt.savefig(f"simulation/output/ipr_slice_{mode}.png")
+    plt.savefig(f"workspace/simulation/output/{mode}/ipr_slice.png")
     plt.close()
 
 if __name__ == '__main__':

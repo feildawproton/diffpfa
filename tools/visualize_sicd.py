@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sarpy.io.complex as sarpy_complex
 
-def visualize(filename):
+def visualize(filename, mode):
     print(f"Opening {filename}...")
     reader = sarpy_complex.open(filename)
     
@@ -16,8 +16,16 @@ def visualize(filename):
     from sarpy.visualization.remap import density
     
     # Use Sarpy's density remapper for optimal SAR visualization (returns 8-bit image)
-    mapped_image = density(data)
-    
+    if mode=="density":
+        mapped_image = density(data)
+    else:
+        mag = 20*np.log10(np.abs(data))
+        maxm = np.max(mag)
+        minm = np.min(mag)
+        mag = (mag - minm) / (maxm - minm)
+        mag = mag * 255
+        mapped_image = mag.astype(np.int8)
+
     print("Plotting image...")
     plt.figure(figsize=(10, 10))
     plt.imshow(mapped_image, cmap='gray', origin='lower')
@@ -27,7 +35,7 @@ def visualize(filename):
     plt.show()
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python visualize_sicd.py <path_to_sicd.nitf>")
+    if len(sys.argv) < 3:
+        print("Usage: python visualize_sicd.py <path_to_sicd.nitf> <mode>")
         sys.exit(1)
-    visualize(sys.argv[1])
+    visualize(sys.argv[1], sys.argv[2])
