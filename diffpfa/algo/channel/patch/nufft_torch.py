@@ -28,7 +28,7 @@ def nufft_grid_1d(
     grid_size: int,
     L_x: float,                  # Spatial extent (meters)
     k_center: float,             # Target center of K-space grid
-    oversample: float = 2.0,
+    oversample: float = 1.0,
     J: int = 6,
     beta: float = 13.9086
 ) -> torch.Tensor:
@@ -78,7 +78,7 @@ def nufft_1d_type1_torch(
     grid_size: int,
     x_min: float,
     x_max: float,
-    oversample: float = 2.0,
+    oversample: float = 1.0,
     J: int = 6
 ) -> torch.Tensor:
     """
@@ -158,7 +158,7 @@ def nufft_2d_type1_torch(
     u_max: float,
     r_min: float,
     r_max: float,
-    oversample: float = 1.5,
+    oversample: float = 1.0,
     J: int = 6,
     beta: float = 13.9086,
     batch_size_pts: int = 1_000_000

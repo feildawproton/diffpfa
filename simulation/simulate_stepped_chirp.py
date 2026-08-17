@@ -180,6 +180,8 @@ def run_simulation(mode="cztnufft"):
     center_u = img_combined_vv.shape[0] // 2
     center_r = img_combined_vv.shape[1] // 2
     
+    print(f"center u {center_u} and center r {center_r} of shape {img_combined_vv.shape}")
+
     # Range slices (fix cross-range u)
     slice_r_combined_vv = img_combined_vv[center_u, :]
     slice_r_single1_vv = img_single1_vv[center_u, :]
@@ -207,7 +209,7 @@ def run_simulation(mode="cztnufft"):
     center_r_c_vv = np.argmax(slice_r_combined_vv)
     center_r_s_vh = np.argmax(slice_r_single_vh)
     center_r_c_vh = np.argmax(slice_r_combined_vh)
-    window = 10
+    window = 64
     
     zoom_single_vv = slice_r_single1_vv[center_r_s_vv - window : center_r_s_vv + window + 1]
     zoom_combined_vv = slice_r_combined_vv[center_r_c_vv - window : center_r_c_vv + window + 1]
@@ -289,7 +291,7 @@ def run_simulation(mode="cztnufft"):
     ax1.set_ylabel("Normalized Magnitude")
     ax1.legend()
     ax1.grid(True)
-    ax1.set_xlim(peak_r - 20, peak_r + 20)
+    
     
     # Panel 2: Cross-Range slice
     peak_u = np.argmax(slice_u_combined_vv)
@@ -301,7 +303,7 @@ def run_simulation(mode="cztnufft"):
     ax2.set_ylabel("Normalized Magnitude")
     ax2.legend()
     ax2.grid(True)
-    ax2.set_xlim(peak_u - 20, peak_u + 20)
+    
     
     plt.tight_layout()
     plt.savefig(f"workspace/simulation/output/{mode}/ipr_slice.png")

@@ -57,6 +57,7 @@ def compute_kspace(
     K_r = F_cpm * sin_theta.unsqueeze(1)  # (N_pulses, N_samples)
 
     return K_u, K_r
+    
 
 def get_image_plane_vectors(cphd_meta: CPHDMetadata, image_plane: str, device: str) -> Tuple[torch.Tensor, torch.Tensor]:
     if image_plane == "Slant":

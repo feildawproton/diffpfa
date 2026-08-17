@@ -75,7 +75,7 @@ class PFAConfig:
     output_dir: str = "output"
     device: str = "cpu"
     nufft_batch_size_pts: int = 1_000_000
-    czt_batch_size: int = 500
+    czt_batch_size: int = 512
     enable_compile: bool = False
     num_subpatches: int = 1  # 1 for global PFA (1x1 grid), > 1 for localized wavefront correction (e.g., 2 for 2x2 grid)
 

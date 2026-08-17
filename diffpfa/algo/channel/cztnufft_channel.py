@@ -25,8 +25,7 @@ def process_channel_czt_nufft(ch_data: CPHDChannelData,
                               czt_batch_size: int,
                               num_subpatches: int = 1,
                               global_k_ctr_u: float = None,
-                              global_k_ctr_r: float = None,
-                              return_kspace: bool = False,
+                              global_k_ctr_r: float = None, 
                               image_plane: str = "Ground",
                               device: str = "cuda",
                               ) -> torch.Tensor:
@@ -88,9 +87,8 @@ def process_channel_czt_nufft(ch_data: CPHDChannelData,
             
             p_N_u, p_N_r = end_u - i_u, end_r - i_r
             
-            oversample = 1.5
-            M_u = next_fast_len(int(math.ceil(p_N_u * oversample)))
-            M_r = next_fast_len(int(math.ceil(p_N_r * oversample)))
+            M_u = next_fast_len(int(math.ceil(p_N_u))) # * oversample)))
+            M_r = next_fast_len(int(math.ceil(p_N_r))) # * oversample)))
             L_u = local_u_max - local_u_min
             L_r = local_r_max - local_r_min
             dK_u = p_N_u / (M_u * max(L_u, 1e-12))
@@ -102,6 +100,8 @@ def process_channel_czt_nufft(ch_data: CPHDChannelData,
             k_out_start_r = k_ctr_r - (M_r / 2.0) * dK_r
             k_out_step_r = dK_r
             
+            print(f"going into czt range with r start out {k_out_start_r} and out step size {k_out_step_r}")
+
             range_resampled = torch.zeros((N_pulses, M_r), dtype=torch.complex64, device=device)
             
             def get_batch(b_idx):
@@ -149,6 +149,8 @@ def process_channel_czt_nufft(ch_data: CPHDChannelData,
                     k_start = kr_b[:, 0].unsqueeze(1)
                     k_step = ((kr_b[:, -1] - kr_b[:, 0]) / max(N_samples - 1, 1)).unsqueeze(1)
                     
+                    #print(f"and range with start {k_start} and step {k_step}")       
+                    
                     batch_out = czt_resample_kspace_1d(
                         sig_patch_b, 
                         k_start=k_start, 
@@ -157,7 +159,6 @@ def process_channel_czt_nufft(ch_data: CPHDChannelData,
                         k_out_start=k_out_start_r,
                         k_out_step=k_out_step_r,
                         spatial_extent=L_r,
-                        oversample=oversample
                     )
                     range_resampled[b_start:b_end, :] = batch_out
 
@@ -179,23 +180,18 @@ def process_channel_czt_nufft(ch_data: CPHDChannelData,
                 chunk_Kr_cart = Kr_cart[b:b + nufft_batch_size]
                 chunk_Ku_cart = cot_theta.unsqueeze(1) * chunk_Kr_cart.unsqueeze(0)
                 
+                print(f"going into nufft portion of cztnufft with u grid size {p_N_u} and u center {k_ctr_u}")
+
                 chunk_grid = nufft_grid_1d(
                     signal=chunk_signal,
                     kx=chunk_Ku_cart,
                     grid_size=p_N_u,
                     L_x=L_u,
                     k_center=k_ctr_u,
-                    oversample=oversample
                 )
                 grid_2d[:, b:b+nufft_batch_size] = chunk_grid
             
             del range_resampled
-            
-            # 3. 2D IFFT and Deconvolution
-            if return_kspace:
-                if num_patches > 1:
-                    raise ValueError("Cannot return kspace when num_subpatches > 1")
-                return grid_2d
                 
             grid_shifted = torch.fft.ifftshift(grid_2d)
             del grid_2d

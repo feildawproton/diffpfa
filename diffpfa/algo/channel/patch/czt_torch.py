@@ -123,7 +123,7 @@ def czt_resample_kspace_1d(
     k_out_start: float,
     k_out_step: float,
     spatial_extent: float,
-    oversample: float = 2.0
+    oversample: float = 1.0
 ) -> torch.Tensor:
     """
     Resamples a K-space signal to a new uniform K-space grid using Chirp Scaling.

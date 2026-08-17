@@ -17,7 +17,7 @@ from diffpfa.algo.channel.patch.nufft_torch import nufft_2d_type1_torch
 
 from diffpfa.io import CPHDReader, SICDWriter
 
-SAMPLE_CPHD_PATH = "/home/feildaw/data/2023-11-14-03-38-20_UMBRA-04_CPHD.cphd"
+SAMPLE_CPHD_PATH = "/home/feildaw/data/2023-09-13-21-18-21_UMBRA-06_CPHD.cphd"
 
 
 def test_look_components_linalg():

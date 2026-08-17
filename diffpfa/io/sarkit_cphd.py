@@ -30,6 +30,7 @@ class SarkitCPHDReader(BaseCPHDReader):
             domain_type = "FX"
             
         sgn_val = xml_helper.load("./{*}Global/{*}SGN")
+        print(f"SGN is {sgn_val}")
         sgn = sgn_val if sgn_val is not None else -1
 
         fx_min = xml_helper.load("./{*}Global/{*}FxBand/{*}FxMin")

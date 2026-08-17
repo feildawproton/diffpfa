@@ -114,6 +114,9 @@ def process_channel_nufft(ch_data: CPHDChannelData,
             local_r_min, local_r_max = p_r_min - r_c, p_r_max - r_c
             p_N_u, p_N_r = end_u - i_u, end_r - i_r
             
+            #print(f"going into nufft with u grid size {p_N_u} and r grid size {p_N_r}")
+            print(f"going into nufft with u_min {local_u_min} and u_max {local_u_max} and r min {local_r_min} and r max {local_r_max}")
+            print(f"woa, i though patches was 1?  i_u: {i_u}, i_r: {i_r}")
             patch_img = nufft_2d_type1_torch(
                 signal=sig_patch,
                 ku=Ku,
@@ -127,7 +130,9 @@ def process_channel_nufft(ch_data: CPHDChannelData,
                 batch_size_pts=nufft_batch_size_pts
             )
             row_patches.append(patch_img)
+        print("len of nufft row patches: " + str(len(row_patches)))
         image_rows.append(torch.cat(row_patches, dim=1))
+    print("len of of nufft images: " + str(len(image_rows)))
 
     image_2d = torch.cat(image_rows, dim=0)
 
