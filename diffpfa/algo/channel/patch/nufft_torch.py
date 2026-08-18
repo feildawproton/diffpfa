@@ -1,5 +1,5 @@
 import math
-from typing import Tuple
+from typing import Tuple, Union
 import numpy as np
 import torch
 from scipy.fft import next_fast_len
@@ -24,13 +24,14 @@ def kaiser_bessel_kernel_1d(x: torch.Tensor, J: int = 6, beta: float = 13.9086) 
 
 def nufft_grid_1d(
     signal: torch.Tensor,        # (N_pts, Batch) complex
-    kx: torch.Tensor,            # (N_pts,) or (N_pts, Batch) in cycles/meter
+    kx: Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]], # (N_pts,) or factored tuple
     grid_size: int,
     L_x: float,                  # Spatial extent (meters)
     k_center: float,             # Target center of K-space grid
     oversample: float = 1.0,
     J: int = 6,
-    beta: float = 13.9086
+    beta: float = 13.9086,
+    batch_size: int = None
 ) -> torch.Tensor:
     """
     1D Type-1 NUFFT K-space gridding step (Non-uniform K-space -> Uniform K-space).
@@ -40,34 +41,52 @@ def nufft_grid_1d(
     device = signal.device
     real_dtype = torch.float64 if signal.dtype == torch.complex128 else torch.float32
     
-    kx = kx.to(real_dtype)
+    if isinstance(kx, tuple):
+        kx_scale, kx_base = kx
+        kx_scale = kx_scale.to(real_dtype)
+        kx_base = kx_base.to(real_dtype)
+    else:
+        kx = kx.to(real_dtype)
+        if kx.ndim == 1:
+            kx = kx.unsqueeze(1).expand(N_pts, B)
      
     M = next_fast_len(int(math.ceil(grid_size * oversample)))
     
     # 1. Calibrate grid scaling
     dK = grid_size / (M * max(L_x, 1e-12))
     
-    if kx.ndim == 1:
-        kx = kx.unsqueeze(1).expand(N_pts, B)
-    
-    # Normalizing coordinates
-    gx_idx = ((kx - k_center) / dK) + (M / 2.0)
-    
     grid = torch.zeros((M, B), dtype=signal.dtype, device=device)
     
-    half_J = J / 2.0
-    j_offsets = torch.arange(-math.floor(half_J), math.ceil(half_J), device=device, dtype=real_dtype)
+    batch_size = batch_size or B
     
-    col_idx = torch.arange(B, device=device).unsqueeze(0).expand(N_pts, B)
-    
-    for jx in j_offsets:
-        ix = torch.floor(gx_idx + jx).to(torch.long)
-        mask = (ix >= 0) & (ix < M)
+    for b in range(0, B, batch_size):
+        b_end = min(b + batch_size, B)
         
-        wx = kaiser_bessel_kernel_1d((gx_idx - ix.to(real_dtype)), J=J, beta=beta)
+        if isinstance(kx, tuple):
+            kx_b = kx_scale.unsqueeze(1) * kx_base[b:b_end].unsqueeze(0)
+        else:
+            kx_b = kx[:, b:b_end]
+            
+        sig_b = signal[:, b:b_end]
         
-        flat_idx = ix[mask] * B + col_idx[mask]
-        grid.view(-1).index_add_(0, flat_idx, signal[mask] * wx[mask])
+        gx_idx_b = ((kx_b - k_center) / dK) + (M / 2.0)
+        
+        half_J = J / 2.0
+        j_offsets = torch.arange(-math.floor(half_J), math.ceil(half_J), device=device, dtype=real_dtype)
+        
+        col_idx = torch.arange(b_end - b, device=device).unsqueeze(0).expand(N_pts, b_end - b)
+        grid_b = torch.zeros((M, b_end - b), dtype=signal.dtype, device=device)
+        
+        for jx in j_offsets:
+            ix = torch.floor(gx_idx_b + jx).to(torch.long)
+            mask = (ix >= 0) & (ix < M)
+            
+            wx = kaiser_bessel_kernel_1d((gx_idx_b - ix.to(real_dtype)), J=J, beta=beta)
+            
+            flat_idx = ix[mask] * (b_end - b) + col_idx[mask]
+            grid_b.view(-1).index_add_(0, flat_idx, sig_b[mask] * wx[mask])
+            
+        grid[:, b:b_end] = grid_b
         
     return grid
 

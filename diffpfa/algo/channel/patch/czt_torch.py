@@ -123,7 +123,8 @@ def czt_resample_kspace_1d(
     k_out_start: float,
     k_out_step: float,
     spatial_extent: float,
-    oversample: float = 1.0
+    oversample: float = 1.0,
+    batch_size: int = None
 ) -> torch.Tensor:
     """
     Resamples a K-space signal to a new uniform K-space grid using Chirp Scaling.
@@ -131,37 +132,61 @@ def czt_resample_kspace_1d(
     2. Spatial Domain back to K-space via CZT on conjugate.
     """
     N = signal.shape[-1]
-    N_spatial = max(int(N * oversample), M_out)
     
-    # 1. K-space to Spatial Domain (Inverse Fourier-like)
-    spatial = czt_1d_torch(
-        signal,
-        M=N_spatial,
-        r_min=-spatial_extent/2.0,
-        r_max=spatial_extent/2.0,
-        k_step=k_step,
-        k_start=k_start,
-        dim=-1
-    )
+    # Calculate input K-space bandwidth to prevent spatial aliasing
+    BW_in = (torch.abs(k_step) * (N - 1)).max().item() if isinstance(k_step, torch.Tensor) else abs(k_step) * (N - 1)
+    N_req = int(math.ceil(spatial_extent * BW_in)) + 1
     
-    r_step = spatial_extent / max(N_spatial - 1, 1)
+    N_spatial = max(int(N * oversample), M_out, N_req)
     
     device = signal.device
+    r_step = spatial_extent / max(N_spatial - 1, 1)
     r_start_t = torch.tensor(-spatial_extent/2.0, device=device, dtype=torch.float64)
     r_step_t = torch.tensor(r_step, device=device, dtype=torch.float64)
     
-    # 2. Spatial Domain to Cartesian K-space (Fourier-like)
-    # The spatial locations are the "frequencies" of the second CZT
-    spatial_conj = torch.conj(spatial)
+    k_cart = torch.zeros(signal.shape[:-1] + (M_out,), dtype=signal.dtype, device=device)
     
-    k_cart = czt_1d_torch(
-        spatial_conj,
-        M=M_out,
-        r_min=k_out_start,
-        r_max=k_out_start + (M_out - 1) * k_out_step,
-        k_step=r_step_t,
-        k_start=r_start_t,
-        dim=-1
-    )
+    batch_size = batch_size or (signal.shape[0] if signal.ndim > 1 else 1)
     
-    return torch.conj(k_cart) / float(N_spatial)
+    for b in range(0, signal.shape[0] if signal.ndim > 1 else 1, batch_size):
+        b_end = min(b + batch_size, signal.shape[0] if signal.ndim > 1 else 1)
+        
+        if signal.ndim > 1:
+            sig_b = signal[b:b_end]
+            k_start_b = k_start[b:b_end] if k_start.ndim > 0 else k_start
+            k_step_b = k_step[b:b_end] if k_step.ndim > 0 else k_step
+        else:
+            sig_b = signal
+            k_start_b = k_start
+            k_step_b = k_step
+            
+        # 1. K-space to Spatial Domain (Inverse Fourier-like)
+        spatial_b = czt_1d_torch(
+            sig_b,
+            M=N_spatial,
+            r_min=-spatial_extent/2.0,
+            r_max=spatial_extent/2.0,
+            k_step=k_step_b,
+            k_start=k_start_b,
+            dim=-1
+        )
+        
+        # 2. Spatial Domain to Cartesian K-space (Fourier-like)
+        spatial_conj_b = torch.conj(spatial_b)
+        
+        k_cart_b = czt_1d_torch(
+            spatial_conj_b,
+            M=M_out,
+            r_min=k_out_start,
+            r_max=k_out_start + (M_out - 1) * k_out_step,
+            k_step=r_step_t,
+            k_start=r_start_t,
+            dim=-1
+        )
+        
+        if signal.ndim > 1:
+            k_cart[b:b_end] = torch.conj(k_cart_b) / float(N_spatial)
+        else:
+            k_cart = torch.conj(k_cart_b) / float(N_spatial)
+    
+    return k_cart

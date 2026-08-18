@@ -75,3 +75,16 @@ def get_image_plane_vectors(cphd_meta: CPHDMetadata, image_plane: str, device: s
         uIAX = torch.as_tensor(cphd_meta.uIAX, dtype=torch.float64, device=device)
         uIAY = torch.as_tensor(cphd_meta.uIAY, dtype=torch.float64, device=device)
     return uIAX, uIAY
+
+def deskew_rvp(signal: torch.Tensor, pvp: dict, N_samples: int, device: str) -> torch.Tensor:
+    if "TxFMRate" in pvp:
+        gamma = torch.as_tensor(pvp["TxFMRate"], dtype=torch.float64, device=device)
+        if "SC0" in pvp and "SCSS" in pvp:
+            sc0 = torch.as_tensor(pvp["SC0"], dtype=torch.float64, device=device)
+            scss = torch.as_tensor(pvp["SCSS"], dtype=torch.float64, device=device)
+            k_idx = torch.arange(N_samples, dtype=torch.float64, device=device)
+            F_hz = sc0.unsqueeze(1) + scss.unsqueeze(1) * k_idx.unsqueeze(0)
+            rvp_phase = torch.pi * (F_hz ** 2) / gamma.unsqueeze(1)
+            rvp_term = torch.exp(torch.complex(torch.zeros_like(rvp_phase), rvp_phase))
+            signal = signal * rvp_term.to(signal.dtype)
+    return signal

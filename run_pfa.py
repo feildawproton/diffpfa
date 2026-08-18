@@ -29,13 +29,12 @@ def run_pfa(cphd_path, mode):
     
     print(f"\n[TIMING] {mode}  Mode took {end_time - start_time:.2f} seconds")
 
-
 if __name__ == "__main__":
-    cphd_path = "/home/feildaw/data/2023-11-14-03-38-20_UMBRA-04_CPHD.cphd"
+    #cphd_path = "/home/feildaw/data/2023-11-14-03-38-20_UMBRA-04_CPHD.cphd"
     #cphd_path = "/home/feildaw/data/2023-09-13-21-18-21_UMBRA-06_CPHD.cphd"
     #cphd_path = "/home/feildaw/data/2023-10-04-02-03-26_UMBRA-04_CPHD.cphd"
-    #cphd_path = "/home/feildaw/data/2023-09-11-10-37-05_UMBRA-05_CPHD.cphd"
+    cphd_path = "/home/feildaw/data/2023-09-11-10-37-05_UMBRA-05_CPHD.cphd"
     
-    run_pfa(cphd_path, "cztnufft")
+    run_pfa(cphd_path, "cztnufft")   
     run_pfa(cphd_path, "nufft")
 
