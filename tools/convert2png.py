@@ -25,4 +25,4 @@ if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("Usage: python visualize_sicd.py <path_to_sicd.nitf> <path_to_png.png")
         sys.exit(1)
-    visualize(sys.argv[1])
+    visualize(sys.argv[1], sys.argv[2])

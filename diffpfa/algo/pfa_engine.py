@@ -297,7 +297,8 @@ class PFAEngine:
             
             
             # Write primary combined SICD-U file
-            out_name = f"SICD_U_{tx_pol}_{rcv_pol}.nitf"
+            base_name = os.path.splitext(os.path.basename(self.reader.file_path))[0]
+            out_name = f"{base_name}_{tx_pol}{rcv_pol}.nitf"
             out_path = os.path.join(self.config.output_dir, out_name)
 
             du = (u_max - u_min) / max(N_u, 1)
