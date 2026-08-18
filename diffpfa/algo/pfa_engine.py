@@ -7,8 +7,7 @@ import numpy as np
 import torch
 from concurrent.futures import ThreadPoolExecutor
 
-from diffpfa.algo.channel.nufft_channel import process_channel_nufft
-from diffpfa.algo.channel.cztnufft_channel import process_channel_czt_nufft
+from diffpfa.algo.channel.pfa_channel import process_channel
 from diffpfa.algo.channel.geometry_channel import compute_kspace
 from diffpfa.constants import SPEED_OF_LIGHT
 from diffpfa.io.base import (
@@ -232,41 +231,26 @@ class PFAEngine:
                     corr_term = torch.exp(1j * phase_corr).unsqueeze(1)
                     ch_data.signal = ch_data.signal * corr_term.to(ch_data.signal.dtype)
                 
-                if mode == "nufft":
-                    #img = self.process_channel_nufft(ch_data, cphd_meta, u_min, u_max, r_min, r_max, N_u, N_r, global_k_ctr_u, global_k_ctr_r)
-                    img = process_channel_nufft(ch_data = ch_data,
-                                                cphd_meta = cphd_meta,
-                                                u_min = u_min,
-                                                u_max = u_max,
-                                                r_min = r_min,
-                                                r_max = r_max,
-                                                N_u = N_u,
-                                                N_r = N_r,
-                                                nufft_batch_size_pts = self.config.nufft_batch_size_pts,
-                                                num_subpatches = self.config.num_subpatches,
-                                                global_k_ctr_u = global_k_ctr_u,
-                                                global_k_ctr_r = global_k_ctr_r,
-                                                image_plane = self.config.image_plane,
-                                                device = self.device) 
-                elif mode == "cztnufft":
-                    #img = self.process_channel_czt_nufft(ch_data, cphd_meta, u_min, u_max, r_min, r_max, N_u, N_r, global_k_ctr_u, global_k_ctr_r, return_kspace=combine_in_kspace)
-                    img = process_channel_czt_nufft(ch_data = ch_data,
-                                                    cphd_meta = cphd_meta,
-                                                    u_min = u_min,
-                                                    u_max = u_max,
-                                                    r_min = r_min,
-                                                    r_max = r_max,
-                                                    N_u = N_u,
-                                                    N_r = N_r,
-                                                    czt_batch_size = self.config.czt_batch_size,
-                                                    num_subpatches = self.config.num_subpatches,
-                                                    global_k_ctr_u = global_k_ctr_u,
-                                                    global_k_ctr_r = global_k_ctr_r,    
-                                                    image_plane = self.config.image_plane,
-                                                    device = self.device) 
-  
-                else:
-                    raise ValueError(f"Unsupported mode: {mode}")
+                # Common call to single routing function
+                batch_size_pts = self.config.nufft_batch_size_pts if mode == "nufft" else self.config.czt_batch_size
+                
+                img = process_channel(
+                    ch_data = ch_data,
+                    cphd_meta = cphd_meta,
+                    u_min = u_min,
+                    u_max = u_max,
+                    r_min = r_min,
+                    r_max = r_max,
+                    N_u = N_u,
+                    N_r = N_r,
+                    mode = mode,
+                    batch_size_pts = batch_size_pts,
+                    num_subpatches = self.config.num_subpatches,
+                    global_k_ctr_u = global_k_ctr_u,
+                    global_k_ctr_r = global_k_ctr_r,
+                    image_plane = self.config.image_plane,
+                    device = self.device
+                )
 
                 channel_images.append(img)
  
