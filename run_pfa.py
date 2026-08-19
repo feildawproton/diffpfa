@@ -9,23 +9,19 @@ import sys
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 from tools.convert2png import visualize
 
-def run_pfa(cphd_path, mode, output_dir):
-    print(f"\nProcessing {os.path.basename(cphd_path)} with {mode}...")
+def run_pfa(cphd_path, output_dir):
+    print(f"\nProcessing {os.path.basename(cphd_path)}...")
     reader = CPHDReader(cphd_path)
     writer = SICDWriter()
     
-    # Create mode-specific output subdirectory
-    mode_output_dir = os.path.join(output_dir, mode)
-    png_output_dir = os.path.join(mode_output_dir, "pngs")
-    os.makedirs(mode_output_dir, exist_ok=True)
+    png_output_dir = os.path.join(output_dir, "pngs")
+    os.makedirs(output_dir, exist_ok=True)
     os.makedirs(png_output_dir, exist_ok=True)
 
     cfg = PFAConfig(
-        mode=mode,
         image_area_mode="ImageArea",
-        output_dir=mode_output_dir,
-        device="cuda",
-        num_subpatches=1
+        output_dir=output_dir,
+        device="cuda"
     )
     engine = PFAEngine(reader, writer, cfg)
     
@@ -40,7 +36,7 @@ def run_pfa(cphd_path, mode, output_dir):
         print(f"Creating PNG for {base_name}...")
         visualize(out_nitf, png_path)
     
-    print(f"[TIMING] {mode} Mode took {end_time - start_time:.2f} seconds")
+    print(f"[TIMING] Processing took {end_time - start_time:.2f} seconds")
     return outs
 
 if __name__ == "__main__":
@@ -60,5 +56,4 @@ if __name__ == "__main__":
     print(f"Found {len(cphd_files)} .cphd files to process.")
     
     for cphd_path in cphd_files:
-        run_pfa(cphd_path, "cztnufft", args.output_dir)
-        run_pfa(cphd_path, "nufft", args.output_dir)
+        run_pfa(cphd_path, args.output_dir)

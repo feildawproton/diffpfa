@@ -18,65 +18,19 @@ from diffpfa.io.base import (
     SICDImagePayload,
 )
 
-# does nothing?!
-def align_and_combine_channels(
-    channel_images: List[torch.Tensor],
-    align_phase: bool = True
-) -> Tuple[torch.Tensor, List[torch.Tensor]]:
-    """
-    Aligns relative phases between multiple sub-channel images of the same polarization pair
-    and coherently combines them.
 
-    Args:
-        channel_images: List of 2D complex image tensors [I_0, I_1, ..., I_{C-1}].
-        align_phase: If True, estimates phase offset relative to reference channel I_0 and aligns.
-
-    Returns:
-        combined_image: 2D complex image tensor of the combined response.
-        aligned_images: List of aligned individual channel image tensors.
-    """
-    if len(channel_images) == 0:
-        raise ValueError("channel_images list cannot be empty.")
-
-    if len(channel_images) == 1:
-        return channel_images[0], channel_images
-
-    ref_img = channel_images[0]
-    aligned_images = [ref_img]
-
-    for c in range(1, len(channel_images)):
-        curr_img = channel_images[c]
-
-        # Note: Data-driven cross-correlation phase alignment is mathematically invalid for orthogonal 
-        # frequency sub-bands. Phase alignment is now performed analytically using PVP RcvTime metadata 
-        # in the PFA engine before gridding.
-        curr_aligned = curr_img
-
-        aligned_images.append(curr_aligned)
-
-    # Coherent summation across channels without large stack allocations
-    combined_image = aligned_images[0].clone()
-    for i in range(1, len(aligned_images)):
-        combined_image.add_(aligned_images[i])
-        
-    return combined_image, aligned_images
 
 @dataclass
 class PFAConfig:
     """Configuration settings for PFA processing."""
-    mode: str = "cztnufft"  # "cztnufft", "nufft"
     image_area_mode: str = "ImageArea"  # "ImageArea", "ExtendedArea", "InscribedRectangle", "TargetPixelSpacing"
     image_plane: str = "Ground"  # "Ground" or "Slant"
     custom_pixel_spacing: Optional[Tuple[float, float]] = None  # (du, dr) in meters
     custom_image_area: Optional[Tuple[float, float, float, float]] = None  # (u_min, u_max, r_min, r_max)
-    align_subchannels: bool = False
     debug_save_channels: bool = False
     output_dir: str = "output"
     device: str = "cpu"
-    nufft_batch_size_pts: int = 1_000_000
     czt_batch_size: int = 1024  
-    enable_compile: bool = False
-    num_subpatches: int = 1  # 1 for global PFA (1x1 grid), > 1 for localized wavefront correction (e.g., 2 for 2x2 grid)
 
 class PFAEngine:
     """Core PyTorch Polar Format Algorithm Processor Engine."""
@@ -177,6 +131,8 @@ class PFAEngine:
 
         output_files = []
         os.makedirs(self.config.output_dir, exist_ok=True)
+        
+        from diffpfa.algo.channel.cztnufft import apply_ifft_and_deconv
 
         for pol_key, ch_list in pol_groups.items():
             tx_pol, rcv_pol = pol_key
@@ -215,12 +171,10 @@ class PFAEngine:
             global_k_ctr_r = (global_kr_min + global_kr_max) / 2.0
 
             # Process each channel in group
-            channel_images = []
+            combined_grid = None
+            grid_params = None
 
             for ch_data in ch_list:
-                # Strict mode selection
-                mode = self.config.mode
-                                
                 # Analytical Phase Alignment (Center Frequency & Pulse Delay)
                 if "RcvTime" in ch_data.pvp and "RcvTime" in first_ch.pvp:
                     tau = ch_data.pvp["RcvTime"] - first_ch.pvp["RcvTime"]
@@ -231,10 +185,7 @@ class PFAEngine:
                     corr_term = torch.exp(1j * phase_corr).unsqueeze(1)
                     ch_data.signal = ch_data.signal * corr_term.to(ch_data.signal.dtype)
                 
-                # Common call to single routing function
-                batch_size_pts = self.config.nufft_batch_size_pts if mode == "nufft" else self.config.czt_batch_size
-                
-                img = process_channel(
+                grid_2d, is_rotated, M_u, M_r = process_channel(
                     ch_data = ch_data,
                     cphd_meta = cphd_meta,
                     u_min = u_min,
@@ -243,21 +194,23 @@ class PFAEngine:
                     r_max = r_max,
                     N_u = N_u,
                     N_r = N_r,
-                    mode = mode,
-                    batch_size_pts = batch_size_pts,
-                    num_subpatches = self.config.num_subpatches,
+                    batch_size_pts = self.config.czt_batch_size,
                     global_k_ctr_u = global_k_ctr_u,
                     global_k_ctr_r = global_k_ctr_r,
                     image_plane = self.config.image_plane,
                     device = self.device
                 )
 
-                channel_images.append(img)
+                if combined_grid is None:
+                    combined_grid = grid_2d.clone()
+                else:
+                    combined_grid.add_(grid_2d)
+                grid_params = (is_rotated, M_u, M_r)
  
                 # Export debug channel image if requested
                 if self.config.debug_save_channels:
-                    save_img = img
-
+                    save_img = apply_ifft_and_deconv(grid_2d, is_rotated, M_u, M_r, N_u, N_r, self.device)
+                    
                     dbg_name = f"SICD_U_{tx_pol}_{rcv_pol}_ch_{ch_data.identifier}.nitf"
                     dbg_path = os.path.join(self.config.output_dir, dbg_name)
 
@@ -289,11 +242,9 @@ class PFAEngine:
                     saved_path = self.writer.write_sicd(dbg_path, payload, cphd_meta)
                     output_files.append(saved_path)
 
-            # Combine sub-channels         
-            combined_img, _ = align_and_combine_channels(
-                channel_images,
-                align_phase=self.config.align_subchannels
-            )
+            # Combine sub-channels
+            is_rotated, M_u, M_r = grid_params
+            combined_img = apply_ifft_and_deconv(combined_grid, is_rotated, M_u, M_r, N_u, N_r, self.device)
             
             
             # Write primary combined SICD-U file

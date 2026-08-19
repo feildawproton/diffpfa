@@ -2,8 +2,8 @@ import math
 from scipy.fft import next_fast_len
 import torch
 
-from diffpfa.algo.channel.patch.czt_torch import czt_resample_kspace_1d
-from diffpfa.algo.channel.patch.nufft_torch import nufft_grid_1d
+from diffpfa.algo.channel.czt_torch import czt_resample_kspace_1d
+from diffpfa.algo.channel.nufft_torch import nufft_grid_1d
 
 def process_patch_cztnufft(
     sig_patch: torch.Tensor,
@@ -95,6 +95,9 @@ def process_patch_cztnufft(
         )
         grid_2d = grid_2d.T
     
+    return grid_2d, is_rotated, M_u, M_r
+
+def apply_ifft_and_deconv(grid_2d: torch.Tensor, is_rotated: bool, M_u: int, M_r: int, N_u: int, N_r: int, device: str) -> torch.Tensor:
     grid_shifted = torch.fft.ifftshift(grid_2d)
     img_oversampled = torch.fft.ifft2(grid_shifted)
     img_oversampled.mul_(M_u * M_r)
@@ -113,8 +116,8 @@ def process_patch_cztnufft(
         deconv = torch.i0(torch.sqrt(torch.clamp(torch.tensor(beta, dtype=real_dtype, device=device)**2 - (math.pi * J * grid_coords)**2, min=1e-12)))
         img_deconv = img_shifted / (deconv.unsqueeze(0) + 1e-12)
     
-    start_u = (M_u - p_N_u) // 2
-    start_r = (M_r - p_N_r) // 2
+    start_u = (M_u - N_u) // 2
+    start_r = (M_r - N_r) // 2
     
-    patch_img = img_deconv[start_u : start_u + p_N_u, start_r : start_r + p_N_r]
+    patch_img = img_deconv[start_u : start_u + N_u, start_r : start_r + N_r]
     return patch_img

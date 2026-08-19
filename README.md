@@ -1,64 +1,55 @@
 # diffpfa
 
-`diffpfa` is a PyTorch-based Polar Format Algorithm (PFA) processor that forms complex synthetic aperture radar (SAR) images from **Compensated Phase History Data (CPHD)** files (data that has been motion compensated to the Scene Reference Point and match filtered).
+`diffpfa` is a PyTorch-based Polar Format Algorithm (PFA) processor that forms complex synthetic aperture radar (SAR) images from **Compensated Phase History Data (CPHD)** files.
 
 ## Goals
 - Perform PFA on CPHD data to form Uncompensated SICD (SICD-U) images in NITF format.
-- Support modern multi-channel CPHD datasets (e.g. step-chirp sub-bands, polarimetric).
-- Output must be purely uncompensated (no side-lobe suppression, no automatic refocusing/autofocus applied by default).
-- Provide multiple Image Formation Processes (IFPs): NUFFT for accurate wide-aperture geometry, and CZTNUFFT (Range CZT + Cross-Range NUFFT) for speed.
+- Support multi-channel CPHD datasets (e.g., stepped-chirp subbands, polarimetric).
+- Provide a purely uncompensated output (no side-lobe suppression or autofocus applied by default).
+- Provide an efficient Image Formation Process (IFP) using a hybrid CZT-NUFFT approach (Range CZT + Cross-Range NUFFT).
 
 ## Constraints
-- **Differentiability**: The core algorithms MUST be implemented in PyTorch and remain differentiable with respect to the raw signal tensor. This enables downstream gradient-based Machine Learning Auto-Focus workflows.
-- **I/O Abstraction**: The core mathematical engine must remain agnostic to the CPHD reader and SICD writer backends.
-- **Sarkit Backend**: The project uses `sarkit` exclusively for SICD writing and CPHD reading to ensure rigorous XML schema compliance.
-- **Memory Safety**: PyTorch memory management must be explicitly configured by the caller (batch sizes) to prevent VRAM Out-of-Memory (OOM) errors on large datasets. Default fallbacks for batch sizes should not be provided to enforce safety.
+- **Differentiability**: The core algorithms are implemented in PyTorch and remain differentiable with respect to the raw signal tensor, enabling downstream gradient-based workflows.
+- **I/O Abstraction**: The core mathematical engine is decoupled from the CPHD reader and SICD writer backends.
+- **Sarkit Backend**: The project uses `sarkit` for SICD writing and CPHD reading to ensure XML schema compliance.
 
 ## Approach
 ### 1. I/O Abstraction
-- Defined abstract interfaces (`CPHDReader`, `SICDWriter`) that parse data into generalized `CPHDMetadata` and `SICDImagePayload` dataclasses.
-- Implemented concrete subclasses for `sarkit` and built testing mocks.
+- Defined abstract interfaces (`CPHDReader`, `SICDWriter`) that parse data into `CPHDMetadata` and `SICDImagePayload` dataclasses.
+- Implemented concrete subclasses for `sarkit` alongside testing mocks.
 
 ### 2. Geometric Mapping
-- Phase math uses rigorous 3D slant-range distances (`torch.linalg.norm(P_vecs)`) from the Phase Center to the Scene Reference Point to prevent spatial scaling and squint errors.
-- Image planes can be mapped to Earth-tangent `Ground` (using metadata uIAX/uIAY) or true perspective `Slant` (using dynamic Line-of-Sight and Velocity vectors at the Center of Aperture).
+- Phase tracking uses 3D slant-range distances (`torch.linalg.norm(P_vecs)`) from the Phase Center to the Scene Reference Point to minimize spatial scaling and squint errors.
+- Image planes can be mapped to Earth-tangent `Ground` (using metadata uIAX/uIAY) or true perspective `Slant` (using Line-of-Sight and Velocity vectors at the Center of Aperture).
 
-### 3. IFP Formation Modes
-- **`mode="nufft"`**: 2D Type-1 NUFFT. Handles wide-aperture curvature by placing non-uniform 2D frequencies onto a Cartesian grid. Memory intensive.
-- **`mode="cztnufft"`**: Fast 1D-CZT along Range (linear projection), followed by 1D Type-1 NUFFT along Cross-Range to correct aperture curvature. (Padded internally to highly composite numbers `next_fast_len` to avoid Blustein's FFT workspace allocation spikes).
+### 3. IFP Formation
+- **Global CZT-NUFFT**: The engine utilizes a single-grid, global PFA processor. It applies a 1D-CZT along Range, followed by a 1D Type-1 NUFFT along Cross-Range to correct aperture curvature. 
+- **Analytical Phase Alignment**: The engine extracts deterministic time delays (`RcvTime`) and center frequencies from the hardware metadata to analytically align the phase of disjoint subbands prior to gridding.
 
-### 4. Step-Chirp Recombination
-- Disjoint sub-bands are geometrically projected onto a shared absolute Cartesian grid.
-- Alignment algorithms default to `False`. The engine trusts hardware coherence to natively stack orthogonal sub-bands without forcing noisy cross-correlation.
+### 4. Step-Chirp K-Space Combination
+- Disjoint subbands are geometrically projected onto a shared Cartesian grid in K-space.
+- **In-Place Accumulation**: The engine folds incoming subbands sequentially into a single K-space accumulator tensor. This enforces an $O(1)$ VRAM footprint with respect to the number of channels, addressing memory constraints on wideband datasets.
+- **Combined IFFT**: By coherently summing channels in the spatial frequency domain, the engine executes the 2D IFFT and spatial deconvolution once per polarization group, reducing total computational overhead.
 
 ## Tests
 The testing suite is located in the `tests/` directory:
-- `test_pfa.py`: Validates the end-to-end PFA pipeline execution for both modes.
+- `test_pfa.py`: Validates the end-to-end PFA pipeline execution.
 - `test_polarization.py`: Validates polarization handling and metadata logic.
-- `test_synthetic.py`: Validates the full engine (including cross-channel combination) against a synthetic point target generated by `MockCPHDReader`.
-- `test_schema.py`: Generates dummy NITFs to validate rigorous CPHD/SICD schema compliance with `sarkit`.
+- `test_synthetic.py`: Validates the engine against a synthetic point target generated by `MockCPHDReader`.
+- `test_schema.py`: Generates NITFs to validate CPHD/SICD schema compliance with `sarkit`.
 
 ## Validation and Simulation
-To validate the mathematical correctness of sub-band and polarimetric coherent combination, the `simulation/simulate_stepped_chirp.py` script provides a full synthetic testbench.
-- It generates a coherent, dual-band, polarimetric point target geometry (at the Scene Reference Point) mapped to cycles/meter space.
-- It intentionally injects synthetic phase offsets between the bands to test alignment correction.
-- Output IPRs (Impulse Responses) are plotted to prove that the coherent combination of two 250 MHz subbands yields an exact halving of the spatial Main Lobe FWHM compared to the individual uncombined subbands.
-- The output `debug_save_channels` SICDs can be visualized using the scripts in the `tools/` directory (e.g., `tools/visualize_sicd.py` and `tools/inspect_sicd.py`).
+To validate the mathematical correctness of subband and polarimetric coherent combination, the `simulation/benchmark_kspace.py` and `simulation/simulate_stepped_chirp.py` scripts provide a synthetic testbench.
+- Outputs IPRs (Impulse Responses) to verify that the coherent combination of two 250 MHz subbands yields the expected halving of the spatial Main Lobe FWHM compared to individual subbands.
 
 ## Implementation Notes
-- **CUDA/PyTorch Determinism:** The engine supports PyTorch GPU acceleration with `torch.compile()` Dynamo support for efficient processing loops. GPU non-determinism (`index_put_`) has been addressed.
-- **Stepped-Chirp Subband Combination:** The engine allocates a **Global K-space Grid Envelope** for all sub-bands, preserving spatial frequency carrier phase when heterodyning the IFFT to baseband.
-- **Native Packaging:** Standard Python packaging (`pyproject.toml`) and `pytest` harnesses support integration into existing workflows.
-
-## Notes
-The `sarpy` backend support has been completely removed in favor of `sarkit` to avoid deprecation warnings and ensure complete schema compliance. Pure `czt` processing has also been removed due to its fundamental unsuitability for cross-range wide aperture curvature (which requires non-linear tracking).
+- **CUDA/PyTorch Determinism**: The engine supports PyTorch GPU acceleration with `torch.compile()` Dynamo support for processing loops. GPU non-determinism (`index_put_`) has been addressed.
+- **Native Packaging**: Standard Python packaging (`pyproject.toml`) and `pytest` harnesses support integration into existing workflows.
 
 ## Performance Tuning Lessons
-- **For Users:** When processing large multi-gigabyte Umbra datasets, use the `cztnufft` mode with `num_subpatches=1` (Global PFA). We have optimized the engine to perform asynchronous batch-loading of data to the GPU and to coherently combine multi-channel data entirely in K-space. This drastically reduces runtime.
-- **For Test Engineers:** The `profile_gpu_compute.py` methodology uses synthetic random tensors of specific dimensions to isolate GPU compute performance (bypassing disk I/O bottlenecks). When testing memory bounds, be aware that PyTorch memory pinning (`pin_memory()`) requires substantial contiguous host memory and may OOM before the GPU does.
-- **For Developers:** 
-  - **Memory over Compute:** In GPU programming, avoiding massive intermediate memory allocations (like `torch.stack`) and unnecessary domain transitions (like redundant $O(N \log N)$ 2D IFFTs) is far more important than optimizing small kernel instructions.
-  - **K-Space Combination:** Coherent combination of sub-channels (including cross-correlation phase alignment) can and should be performed directly on the Cartesian K-space grids prior to the 2D IFFT. This exploits the linearity of the Fourier transform and reduces the number of massive 2D IFFTs required per polarization from $N$ to 1.
-  - **VRAM Fragmentation:** Sequential runs of memory-heavy PyTorch pipelines can trigger severe PCIe swapping if the Caching Allocator fragments. The `PFAEngine` natively forces a `torch.cuda.empty_cache()` upon completion to prevent subsequent pipelines from thrashing the unified memory.
-  - **Spatial Aliasing in CZT:** When using intermediate spatial domains (like in `cztnufft`), the number of discrete evaluation points must satisfy the Nyquist limit for the input bandwidth (`BW_in * L_r`). Failing to do so causes massive K-space aliasing (resulting in "squished" or inverted images).
-  - **Geometrical Rotations:** Modern SAR platforms (e.g. UMBRA) may collect data in 90-degree rotated orientations where fast-time corresponds to Cross-Range. Factored algorithms like `cztnufft` must actively detect this using look-vector projections (`cos_theta` vs `sin_theta`) and dynamically swap the fast-time and slow-time processing dimensions.
+- **For Developers**: 
+  - **Memory Management**: In PyTorch, avoiding intermediate memory allocations (such as retaining lists of large tensors) and unnecessary domain transitions can be as impactful as kernel-level optimization.
+  - **K-Space Combination**: Coherent combination of sub-channels can be performed directly on the Cartesian K-space grids prior to the 2D IFFT. This exploits the linearity of the Fourier transform and reduces the number of 2D IFFTs required per polarization from $N$ to 1.
+  - **VRAM Fragmentation**: Sequential runs of memory-heavy PyTorch pipelines can cause the Caching Allocator to fragment. `PFAEngine` explicitly calls `torch.cuda.empty_cache()` upon completion to mitigate this.
+  - **Spatial Aliasing in CZT**: When using intermediate spatial domains, the number of discrete evaluation points must satisfy the Nyquist limit for the input bandwidth (`BW_in * L_r`). Failing to do so causes K-space aliasing.
+  - **Geometrical Rotations**: Some SAR platforms collect data in 90-degree rotated orientations where fast-time corresponds to Cross-Range. Factored algorithms actively detect this using look-vector projections (`cos_theta` vs `sin_theta`) to route the fast-time and slow-time processing dimensions accordingly.
