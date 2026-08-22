@@ -1,35 +1,32 @@
-import os
-import time
 import argparse
+import os
+import sys
+import time
 from glob import glob
 
-from diffpfa.algo import PFAConfig, PFAEngine
-from diffpfa.io import CPHDReader, SICDWriter
-import sys
+from diffpfa.IFP import IFAProcessor
+
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 from tools.convert2png import visualize
 
 def run_pfa(cphd_path, output_dir):
     print(f"\nProcessing {os.path.basename(cphd_path)}...")
-    reader = CPHDReader(cphd_path)
-    writer = SICDWriter()
     
     png_output_dir = os.path.join(output_dir, "pngs")
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(png_output_dir, exist_ok=True)
 
-    cfg = PFAConfig(
-        image_area_mode="ImageArea",
+    processor = IFAProcessor(
+        cphd_path=cphd_path,
         output_dir=output_dir,
+        image_area_mode="ImageArea",
         device="cuda"
     )
-    engine = PFAEngine(reader, writer, cfg)
     
     start_time = time.time()
-    outs = engine.run()
+    outs = processor.run()
     end_time = time.time()
     
-    # Create PNGs for each generated SICD
     for out_nitf in outs:
         base_name = os.path.splitext(os.path.basename(out_nitf))[0]
         png_path = os.path.join(png_output_dir, f"{base_name}.png")
@@ -46,7 +43,6 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    # Find all .cphd files in the input directory
     cphd_files = glob(os.path.join(args.input_dir, "*.cphd"))
     
     if not cphd_files:

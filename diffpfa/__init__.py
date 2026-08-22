@@ -1,5 +1,3 @@
-"""
-diffpfa: PyTorch-based Polar Format Algorithm (PFA) processor for CPHD data.
-"""
+from diffpfa.IFP import IFAProcessor
 
-__version__ = "0.1.0"
+__all__ = ["IFAProcessor"]

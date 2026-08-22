@@ -28,6 +28,7 @@ workspace/
 
 # Private
 PI/
+audit/
 
 # package stuff
 *.egg-info*
