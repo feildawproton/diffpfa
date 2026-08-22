@@ -20,6 +20,7 @@ class CPHDMetadata:
     iarp_ecf: np.ndarray
     uIAX: np.ndarray
     uIAY: np.ndarray
+    ref_ch_id: str
     image_area: Optional[ImageAreaBounds]
     extended_area: Optional[ImageAreaBounds]
     collection_start: Optional[str]

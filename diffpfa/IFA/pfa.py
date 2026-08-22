@@ -105,6 +105,7 @@ def _compute_kspace(
     return K_u, K_r
 
 def _apply_ifft_and_deconv(grid_2d: torch.Tensor, is_rotated: bool, M_u: int, M_r: int, N_u: int, N_r: int, device: str) -> torch.Tensor:
+    # deconv to adjust for the bell shaped taper caused by kaisser_bessel (which gets rid of gridding artifacts/aliasinidfd
     grid_shifted = torch.fft.ifftshift(grid_2d)
     img_oversampled = torch.fft.ifft2(grid_shifted)
     img_oversampled.mul_(M_u * M_r)
@@ -130,17 +131,18 @@ def _apply_ifft_and_deconv(grid_2d: torch.Tensor, is_rotated: bool, M_u: int, M_
     return patch_img
 
 def pfa_per_polar(
-    channel_signals: List[torch.Tensor],
+    channel_signals: List[np.ndarray],
     channel_pvps: List[Dict[str, np.ndarray]],
     channel_fxcs: List[float],
     channel_domain_types: List[str],
+    ref_rcv_time: np.ndarray,
     cphd_meta, 
     u_min: float, u_max: float, r_min: float, r_max: float,
     custom_pixel_spacing: Optional[Tuple[float, float]] = None,
     image_plane: str = "Ground",
     czt_batch_size: int = 1024,
     device: str = "cuda"
-) -> Tuple[torch.Tensor, float, float, int, int]:
+) -> Tuple[np.ndarray, float, float, int, int]:
     
     global_ku_min, global_ku_max = float('inf'), float('-inf')
     global_kr_min, global_kr_max = float('inf'), float('-inf')
@@ -185,18 +187,19 @@ def pfa_per_polar(
     grid_params = None
 
     for i in range(len(channel_signals)):
-        sig = channel_signals[i].to(device)
+        sig = torch.from_numpy(channel_signals[i].astype(np.complex64)).cfloat().to(device) # don't move until needed
         pvp = channel_pvps[i]
         fxc = channel_fxcs[i]
 
-        if "RcvTime" in pvp and "RcvTime" in channel_pvps[0]:
-            tau = pvp["RcvTime"] - channel_pvps[0]["RcvTime"]
+        if "RcvTime" in pvp and ref_rcv_time is not None: #"RcvTime" in channel_pvps[0]:
+            #tau = pvp["RcvTime"] - channel_pvps[0]["RcvTime"]
+            tau = pvp["RcvTime"] - ref_rcv_time
             fc_global = (cphd_meta.global_fx_min + cphd_meta.global_fx_max) / 2.0
             tau_tensor = torch.as_tensor(tau, dtype=torch.float64, device=device)
             phase_corr = -2.0 * torch.pi * (fc_global - fxc) * tau_tensor
             corr_term = torch.exp(1j * phase_corr).unsqueeze(1)
             sig = sig * corr_term.to(sig.dtype)
-        
+
         grid_2d, is_rotated, M_u, M_r = process_channel(
             signal=sig,
             pvp=pvp,
@@ -226,7 +229,7 @@ def pfa_per_polar(
     is_rotated, M_u, M_r = grid_params
     combined_img = _apply_ifft_and_deconv(combined_grid, is_rotated, M_u, M_r, N_u, N_r, device)
     
-    img_cpu = combined_img.cpu()
+    img_cpu = combined_img.cpu().numpy().astype(np.complex64)
     del combined_grid
     del combined_img
     if torch.cuda.is_available():

@@ -1,5 +1,4 @@
 import os
-import torch
 import numpy as np
 import lxml.etree as ET
 import datetime
@@ -7,6 +6,8 @@ from typing import List, Dict, Tuple, Optional
 import sarkit.cphd as skcphd
 import sarkit.sicd as sksicd
 from pathlib import Path
+import concurrent.futures
+import time
 
 from diffpfa.types import CPHDMetadata, ImageAreaBounds
 from diffpfa.IFA.pfa import pfa_per_polar
@@ -24,6 +25,28 @@ def _cartesian_to_geodetic(x: np.ndarray) -> np.ndarray:
     n = a / np.sqrt(1 - e2 * np.sin(lat)**2)
     alt = p / np.cos(lat) - n
     return np.array([lat, lon, alt])
+
+def _read_single_channel(cphd_path: str, ch_id: str, fxc: float, domain_type: str):
+    """Worker function to read a single channel in its own thread/file handle."""
+    import sarkit.cphd as skcphd
+
+    # Each thread MUST open its own file handle
+    with open(cphd_path, "rb") as f:
+        reader = skcphd.Reader(f)
+
+        # Read PVPs
+        pvp_struct = reader.read_pvps(ch_id)
+        pvp_dict = {}
+        for name in pvp_struct.dtype.names:
+            arr = pvp_struct[name]
+            if hasattr(arr, "dtype") and arr.dtype.byteorder not in ("=", "|"):
+                arr = arr.astype(arr.dtype.newbyteorder("="))
+            pvp_dict[name] = np.ascontiguousarray(arr)
+
+        # Read Signal
+        sig_np = reader.read_signal(ch_id)
+
+    return sig_np, pvp_dict, fxc, domain_type
 
 class IFAProcessor:
     def __init__(self, cphd_path: str, output_dir: str, image_area_mode: str = "ImageArea", custom_pixel_spacing: Optional[Tuple[float, float]] = None, device: str = "cuda"):
@@ -44,6 +67,7 @@ class IFAProcessor:
         iarp_ecf = xml_helper.load("./{*}SceneCoordinates/{*}IARP/{*}ECF")
         uIAX = xml_helper.load("./{*}SceneCoordinates/{*}ReferenceSurface/{*}Planar/{*}uIAX")
         uIAY = xml_helper.load("./{*}SceneCoordinates/{*}ReferenceSurface/{*}Planar/{*}uIAY")
+        ref_ch_id = xml_helper.load("./{*}Channel/{*}RefChId")
 
         img_area = None
         ia_x1y1 = xml_helper.load("./{*}SceneCoordinates/{*}ImageArea/{*}X1Y1")
@@ -62,6 +86,11 @@ class IFAProcessor:
         arp_pos = xml_helper.load("./{*}ReferenceGeometry/{*}Monostatic/{*}ARPPos")
         arp_vel = xml_helper.load("./{*}ReferenceGeometry/{*}Monostatic/{*}ARPVel")
 
+        line_spacing = xml_helper.load("./{*}SceneCoordinates/{*}ImageGrid/{*}IAXExtent/{*}LineSpacing")
+        sample_spacing = xml_helper.load("./{*}SceneCoordinates/{*}ImageGrid/{*}IAYExtent/{*}SampleSpacing")
+
+        classification = xml_helper.load("./{*}CollectionID/{*}Classification")
+
         return CPHDMetadata(
             domain_type=str(domain_type),
             sgn=int(sgn),
@@ -70,16 +99,17 @@ class IFAProcessor:
             iarp_ecf=iarp_ecf,
             uIAX=uIAX,
             uIAY=uIAY,
+            ref_ch_id = ref_ch_id,
             image_area=img_area,
             extended_area=ext_area,
             collection_start=str(coll_start) if coll_start else None,
             radar_mode="UNKNOWN",
-            classification="UNCLASSIFIED",
+            classification=str(classification) if classification else "UNCLASSIFIED",
             srp_ecf=srp_ecf,
             arp_pos_coa=arp_pos,
             arp_vel_coa=arp_vel,
-            line_spacing=None,
-            sample_spacing=None,
+            line_spacing=line_spacing,
+            sample_spacing=sample_spacing,
             raw_meta=xmltree,
         )
 
@@ -98,9 +128,9 @@ class IFAProcessor:
             r_min, r_max = -100.0, 100.0
         return u_min, u_max, r_min, r_max
         
-    def _write_sicd(self, output_path: str, img_cpu: torch.Tensor, cphd_meta, tx_pol, rcv_pol, bw_u, bw_r, N_u, N_r, u_min, r_min, du, dr):
-        img_arr = img_cpu.numpy().astype(np.complex64)
-        num_rows, num_cols = img_arr.shape
+    def _write_sicd(self, output_path: str, img_cpu: np.ndarray, cphd_meta, tx_pol, rcv_pol, bw_u, bw_r, N_u, N_r, u_min, r_min, du, dr):
+        
+        num_rows, num_cols = img_cpu.shape
         
         root = ET.Element("{urn:SICD:1.3.0}SICD")
         def sub(parent, tag, text=None, **attrib):
@@ -115,7 +145,7 @@ class IFAProcessor:
         sub(col_info, "CollectType", "MONOSTATIC")
         rm = sub(col_info, "RadarMode")
         sub(rm, "ModeType", "SPOTLIGHT")
-        sub(col_info, "Classification", "UNCLASSIFIED")
+        sub(col_info, "Classification", cphd_meta.classification)
 
         img_creation = sub(root, "ImageCreation")
         sub(img_creation, "Application", "diffpfa")
@@ -271,7 +301,8 @@ class IFAProcessor:
         sub(scpcoa, "LayoverAng", "0.0")
 
         xmltree = ET.ElementTree(root)
-        sec = sksicd.NitfSecurityFields(clas="U")
+        clas_char = cphd_meta.classification[0].upper() if cphd_meta.classification else "U"
+        sec = sksicd.NitfSecurityFields(clas=clas_char)
         sicd_meta = sksicd.NitfMetadata(
             xmltree=xmltree,
             file_header_part=sksicd.NitfFileHeaderPart(ostaid="CZTPFA", ftitle="SICD Output", security=sec),
@@ -284,12 +315,14 @@ class IFAProcessor:
             os.remove(output_path)
 
         with open(output_path, "wb") as f, sksicd.NitfWriter(f, sicd_meta) as writer:
-            writer.write_image(img_arr)
+            writer.write_image(img_cpu)
             
         return output_path
 
     def run(self):
         print(f"Reading CPHD: {self.cphd_path}")
+        t0 = time.perf_counter()
+        read_time = 0
         output_files = []
         with open(self.cphd_path, "rb") as f:
             reader = skcphd.Reader(f)
@@ -322,47 +355,72 @@ class IFAProcessor:
             os.makedirs(self.output_dir, exist_ok=True)
             u_min, u_max, r_min, r_max = self._determine_spatial_bounds(cphd_meta)
             
+            # need for correcting phase to reference channel RcvTime
+            ref_pvp = reader.read_pvps(cphd_meta.ref_ch_id)
+            ref_rcv_time = np.ascontiguousarray(ref_pvp["RcvTime"].astype(ref_pvp["RcvTime"].dtype.newbyteorder("=")))
+
+            read_time = time.perf_counter() - t0
+
+            proc_time = 0
+            write_time = 0
             for pol_key, ch_info_list in pol_groups.items():
+                start_copy = time.perf_counter()
                 tx_pol, rcv_pol = pol_key
                 print(f"Processing Polarization Group: {tx_pol}/{rcv_pol} with {len(ch_info_list)} channels.")
-                
-                channel_signals = []
-                channel_pvps = []
-                channel_fxcs = []
-                channel_domains = []
-                
-                for ch_id, fxc in ch_info_list:
-                    pvp_struct = reader.read_pvps(ch_id)
-                    pvp_dict = {}
-                    for name in pvp_struct.dtype.names:
-                        arr = pvp_struct[name]
-                        if hasattr(arr, "dtype") and arr.dtype.byteorder not in ("=", "|"):
-                            arr = arr.astype(arr.dtype.newbyteorder("="))
-                        pvp_dict[name] = np.ascontiguousarray(arr)
-                    
-                    sig_np = reader.read_signal(ch_id)
-                    sig_tensor = torch.from_numpy(sig_np.astype(np.complex64)).cfloat()
-                    
-                    channel_signals.append(sig_tensor)
-                    channel_pvps.append(pvp_dict)
-                    channel_fxcs.append(fxc)
-                    channel_domains.append(cphd_meta.domain_type)
-                    
+               
+                channel_signals = [None] * len(ch_info_list)
+                channel_pvps = [None] * len(ch_info_list)
+                channel_fxcs = [None] * len(ch_info_list)
+                channel_domains = [None] * len(ch_info_list)
+
+                # You can adjust max_workers based on your disk's parallel read capabilities (e.g. NVMe vs HDD)
+                with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+                    # Submit all channel read tasks
+                    future_to_index = {
+                        executor.submit(_read_single_channel, self.cphd_path, ch_id, fxc, cphd_meta.domain_type): i
+                        for i, (ch_id, fxc) in enumerate(ch_info_list)
+                    }
+
+                    # Harvest results as they complete, maintaining original list order
+                    for future in concurrent.futures.as_completed(future_to_index):
+                        i = future_to_index[future]
+                        sig_np, pvp_dict, fxc, domain_type = future.result()
+
+                        channel_signals[i] = sig_np
+                        channel_pvps[i] = pvp_dict
+                        channel_fxcs[i] = fxc
+                        channel_domains[i] = domain_type
+ 
+                # 1. Use user-provided spacing
+                # 2. Fall back to CPHD suggested grid spacing
+                # 3. Fall back to None (let pfa_per_polar calculate Nyquist limit)
+                active_spacing = self.custom_pixel_spacing
+                if active_spacing is None and cphd_meta.line_spacing and cphd_meta.sample_spacing:
+                    active_spacing = (cphd_meta.line_spacing, cphd_meta.sample_spacing)
+
+                stop_copy = time.perf_counter()
+
+                read_time += stop_copy - start_copy
+
                 print("Calling IFP_PerPolar...")
                 img_cpu, bw_u_actual, bw_r_actual, N_u, N_r = pfa_per_polar(
                     channel_signals=channel_signals,
                     channel_pvps=channel_pvps,
                     channel_fxcs=channel_fxcs,
                     channel_domain_types=channel_domains,
+                    ref_rcv_time=ref_rcv_time,
                     cphd_meta=cphd_meta,
                     u_min=u_min,
                     u_max=u_max,
                     r_min=r_min,
                     r_max=r_max,
-                    custom_pixel_spacing=self.custom_pixel_spacing,
+                    custom_pixel_spacing=active_spacing,
                     device=self.device
                 )
-                
+
+                stop_proc = time.perf_counter()
+                proc_time += stop_proc - stop_copy
+
                 name = Path(self.cphd_path).name
                 name = str(name).split("_CPHD")[0] # specific to umbra
                 out_name = f"{name}_SICDU_{tx_pol}_{rcv_pol}.nitf"
@@ -374,5 +432,6 @@ class IFAProcessor:
                 print(f"Writing {out_name}...")
                 self._write_sicd(out_path, img_cpu, cphd_meta, tx_pol, rcv_pol, bw_u_actual, bw_r_actual, N_u, N_r, u_min, r_min, du, dr)
                 output_files.append(out_path)
-                
-        return output_files
+                write_time += (time.perf_counter() - stop_proc)
+
+        return (output_files, read_time, proc_time, write_time)
