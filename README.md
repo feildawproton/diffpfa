@@ -3,10 +3,9 @@
 `diffpfa` is a PyTorch-based Polar Format Algorithm (PFA) processor that forms complex synthetic aperture radar (SAR) images from Compensated Phase History Data (CPHD) files.
 
 ## Goals
-- Perform PFA on CPHD data to form Uncompensated SICD (SICD-U) images in NITF format.
+- Perform PFA on CPHD data to form Unfocused SICD (SICD-U) images in NITF format.
 - Support multi-channel CPHD datasets (e.g., stepped-chirp subbands, full polarimetric data).
-- Produce uncompensated outputs without applying side-lobe suppression or autofocus algorithms.
-- Provide an efficient Image Formation Process (IFP) using a hybrid CZT-NUFFT pipeline.
+- Uses a CZT (range) NUFFT (cross-range) implementation.
 
 ## Usage
 The primary entry point is `run_pfa.py`, designed to batch process directories of CPHD files while tracking I/O and compute performance.
@@ -24,9 +23,9 @@ python visualize_results.py /path/to/output_sicds
 The pipeline is split between I/O orchestration and mathematical processing to separate concerns and manage system resources efficiently.
 
 ### 1. I/O and Orchestration (`IFAProcessor`)
-- **Parallel Read**: Uses threaded execution to read independent CPHD channels and metadata concurrently, minimizing I/O bottlenecks.
-- **Dynamic Geometry**: Checks dataset orientation against the Center of Aperture to gracefully handle non-standard image plane definitions (e.g., where range and cross-range axes are transposed), preserving a uniform standard interface for the math engine.
-- **Direct Formatting**: Utilizes `sarkit` for reading CPHDs and writing compliant SICD-U files without heavy intermediate abstraction layers.
+- **Parallel Read**: Uses threaded execution to read independent CPHD channels.
+- **Dynamic Geometry**: Checks dataset orientation against the Center of Aperture where range and cross-range axes need to be transpose for czt implementation.
+- **Direct Formatting**: Utilizes `sarkit` for reading CPHDs and writing compliant SICD-U.
 
 ### 2. Mathematics and Image Formation (`pfa_per_polar`)
 - **Differentiable Backend**: Operations are written in PyTorch, retaining differentiability with respect to the raw signal tensor.

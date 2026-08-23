@@ -4,6 +4,7 @@ import sys
 import time
 from glob import glob
 import numpy as np
+import torch
 
 from diffpfa.IFP import IFAProcessor
 
@@ -19,7 +20,8 @@ def run_pfa(cphd_path, output_dir):
         image_area_mode="ImageArea",
         device="cuda"
     )
-    out_paths, internal_read_time, proc_time, write_time = processor.run()
+    with torch.inference_mode():
+        out_paths, internal_read_time, proc_time, write_time = processor.run()
     
     # Combine the class instantiation and all internal XML/disk reading into one bucket
     setup_and_read_time = (time.perf_counter() - t0_setup) - proc_time - write_time
