@@ -1,51 +1,42 @@
 # diffpfa
 
-`diffpfa` is a PyTorch-based Polar Format Algorithm (PFA) processor that forms complex synthetic aperture radar (SAR) images from **Compensated Phase History Data (CPHD)** files.
+`diffpfa` is a PyTorch-based Polar Format Algorithm (PFA) processor that forms complex synthetic aperture radar (SAR) images from Compensated Phase History Data (CPHD) files.
 
 ## Goals
 - Perform PFA on CPHD data to form Uncompensated SICD (SICD-U) images in NITF format.
-- Support multi-channel CPHD datasets (e.g., stepped-chirp subbands, polarimetric).
-- Provide a purely uncompensated output (no side-lobe suppression or autofocus applied by default).
-- Provide an efficient Image Formation Process (IFP) using a hybrid CZT-NUFFT approach (Range CZT + Cross-Range NUFFT).
+- Support multi-channel CPHD datasets (e.g., stepped-chirp subbands, full polarimetric data).
+- Produce uncompensated outputs without applying side-lobe suppression or autofocus algorithms.
+- Provide an efficient Image Formation Process (IFP) using a hybrid CZT-NUFFT pipeline.
 
-## Constraints
-- **Differentiability**: The core algorithms are implemented in PyTorch and remain differentiable with respect to the raw signal tensor, enabling downstream gradient-based workflows.
-- **Sarkit Backend**: The project natively utilizes `sarkit` for direct SICD writing and CPHD reading to ensure strict XML schema compliance without intermediate OOP abstractions.
+## Usage
+The primary entry point is `run_pfa.py`, designed to batch process directories of CPHD files while tracking I/O and compute performance.
 
-## Approach
-### 1. Architectural Pipeline
-- **IFAProcessor**: A minimal controller that handles direct `sarkit` I/O, extracts metadata, groups channels by polarization, and writes the output SICD-U files.
-- **IFP_PerPolar**: A pure mathematical pipeline that accepts raw CPU signal tensors, computes optimal composite K-space bounds, natively manages GPU allocations per channel, and returns a single complex spatial image. 
+```bash
+python run_pfa.py --input_dir /path/to/cphds --output_dir /path/to/output_sicds
+```
 
-### 2. Geometric Mapping
-- Phase tracking uses 3D slant-range distances (`torch.linalg.norm(P_vecs)`) from the Phase Center to the Scene Reference Point to minimize spatial scaling and squint errors.
-- Image planes can be mapped to Earth-tangent `Ground` (using metadata uIAX/uIAY) or true perspective `Slant` (using Line-of-Sight and Velocity vectors at the Center of Aperture).
+To convert the generated SICD files to 8-bit PNG images (using a density remapper), run:
+```bash
+python visualize_results.py /path/to/output_sicds
+```
 
-### 3. IFP Formation
-- **Global CZT-NUFFT**: The engine utilizes a single-grid, global PFA processor. It applies a 1D-CZT along Range, followed by a 1D Type-1 NUFFT along Cross-Range to correct aperture curvature. 
-- **Analytical Phase Alignment**: The engine extracts deterministic time delays (`RcvTime`) and center frequencies from the hardware metadata to analytically align the phase of disjoint subbands prior to gridding.
+## Architecture
+The pipeline is split between I/O orchestration and mathematical processing to separate concerns and manage system resources efficiently.
 
-### 4. Step-Chirp K-Space Combination
-- Disjoint subbands are geometrically projected onto a shared Cartesian grid in K-space.
-- **In-Place Accumulation**: The engine folds incoming subbands sequentially into a single K-space accumulator tensor. By deleting individual channel tensors from RAM immediately after GPU projection, it enforces an $O(1)$ memory footprint with respect to the number of channels, addressing memory constraints on wideband datasets.
-- **Combined IFFT**: By coherently summing channels in the spatial frequency domain, the engine executes the 2D IFFT and spatial deconvolution once per polarization group, reducing total computational overhead.
+### 1. I/O and Orchestration (`IFAProcessor`)
+- **Parallel Read**: Uses threaded execution to read independent CPHD channels and metadata concurrently, minimizing I/O bottlenecks.
+- **Dynamic Geometry**: Checks dataset orientation against the Center of Aperture to gracefully handle non-standard image plane definitions (e.g., where range and cross-range axes are transposed), preserving a uniform standard interface for the math engine.
+- **Direct Formatting**: Utilizes `sarkit` for reading CPHDs and writing compliant SICD-U files without heavy intermediate abstraction layers.
 
-## Tests
-The testing suite is located in the `tests/` directory:
-- `test_pfa.py`: Validates the end-to-end PFA pipeline execution.
-- `test_polarization.py`: Validates polarization handling and metadata logic.
-- `test_schema.py`: Generates NITFs to validate CPHD/SICD schema compliance with `sarkit`.
+### 2. Mathematics and Image Formation (`pfa_per_polar`)
+- **Differentiable Backend**: Operations are written in PyTorch, retaining differentiability with respect to the raw signal tensor.
+- **CZT-NUFFT Processing**: Applies a 1D-CZT along range and a 1D Type-1 NUFFT along cross-range to correct aperture curvature.
+- **RVP Deskew**: Dynamically corrects Residual Video Phase artifacts present in stretch-processed data, while safely bypassing the step if the data was processed with matched filters.
+- **In-Place Accumulation**: Disjoint subbands are geometrically projected onto a shared Cartesian K-space grid. Incoming channels are folded sequentially into an accumulator and discarded from RAM immediately, enforcing a minimal memory footprint. Coherently summing channels prior to the 2D IFFT and spatial deconvolution reduces total computational overhead.
 
-## Validation and Simulation
-To validate the mathematical correctness of subband and polarimetric coherent combination, the `simulation/benchmark_kspace.py` and `simulation/simulate_stepped_chirp.py` scripts provide a synthetic testbench.
-- Outputs IPRs (Impulse Responses) to verify that the coherent combination of two 250 MHz subbands yields the expected halving of the spatial Main Lobe FWHM compared to individual subbands.
+## Validation and Testing
+The `simulation/` directory contains tools (`benchmark_kspace.py`, `simulate_stepped_chirp.py`) for generating synthetic data. This enables direct validation of subband phase alignment and coherent combination, ensuring expected theoretical improvements in spatial resolution (e.g., main lobe FWHM halving when combining two contiguous subbands). Basic functionality and schema compliance are verified via the `tests/` directory.
 
-## Implementation Notes
-- **CUDA/PyTorch Determinism**: The engine supports PyTorch GPU acceleration with `torch.compile()` Dynamo support for processing loops. GPU non-determinism (`index_put_`) has been addressed.
-- **Native Packaging**: Standard Python packaging (`pyproject.toml`) and `pytest` harnesses support integration into existing workflows.
-
-## Performance Tuning Lessons
-- **For Developers**: 
-  - **Memory Management**: In PyTorch, avoiding intermediate memory allocations (such as retaining lists of large tensors) and unnecessary domain transitions can be as impactful as kernel-level optimization. Utilizing CPU tensors as a staging ground before sequential GPU execution preserves total system stability.
-  - **K-Space Combination**: Coherent combination of sub-channels can be performed directly on the Cartesian K-space grids prior to the 2D IFFT. This exploits the linearity of the Fourier transform and reduces the number of 2D IFFTs required per polarization from $N$ to 1.
-  - **VRAM Fragmentation**: Sequential runs of memory-heavy PyTorch pipelines can cause the Caching Allocator to fragment. `torch.cuda.empty_cache()` must be used strategically.
+## Notes on Optimization
+- **Memory Handling**: Sequential processing of memory-intensive datasets necessitates careful management of PyTorch's Caching Allocator. Deletion of intermediate tensors and strategic use of `torch.cuda.empty_cache()` are employed to prevent memory fragmentation on wideband, multi-channel collections.
+- **Separating I/O**: The pipeline clearly delineates `setup_and_read_time` from `proc_time` to isolate disk performance from GPU throughput, providing actionable statistics when scaling to large datasets.
