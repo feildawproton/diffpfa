@@ -10,7 +10,7 @@ import concurrent.futures
 import time
 
 from diffpfa.types import CPHDMetadata, ImageAreaBounds
-from diffpfa.IFA.pfa import pfa_per_polar
+from diffpfa.IFA.PFA import pfa_per_polar
 
 def _cartesian_to_geodetic(x: np.ndarray) -> np.ndarray:
     a = 6378137.0
