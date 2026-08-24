@@ -14,16 +14,20 @@ def _apply_ifft_and_deconv(grid: torch.Tensor, M_u: int, M_r, device: str) -> to
     """
     grid = torch.fft.ifftshift(grid)
     img  = torch.fft.ifft2(grid)
-    img  = img * (M_u * M_r)            # denormalize!
-    img  = torch.fft.fftshift(img)
+    
+    # Eagerly delete the grid copy to free up VRAM before continuing!
+    del grid
+    
+    # Do the scalar multiplication IN-PLACE using mul_
+    img.mul_(M_u * M_r)            
+    
+    # fftshift creates a new tensor, so re-assign and delete the old one implicitly
+    img = torch.fft.fftshift(img)
     
     beta = 13.9086
     J = 6
     real_dtype = torch.float64
     
-    print(f"M_u {M_u}")
-    print(f"img shape {img.shape}")
-
     grid_coords = (torch.arange(M_u, device=device, dtype=real_dtype) - M_u / 2.0) / M_u
     deconv = torch.i0(
             torch.sqrt(
@@ -31,8 +35,8 @@ def _apply_ifft_and_deconv(grid: torch.Tensor, M_u: int, M_r, device: str) -> to
                     torch.tensor(beta, 
                                  dtype=real_dtype, 
                                  device=device)**2 - (math.pi * J * grid_coords)**2, min=1e-12)))
-    img = img / (deconv.unsqueeze(1) + 1e-12)
-        
+    # Divide IN-PLACE to save allocating another full-size image tensor
+    img.div_(deconv.unsqueeze(1) + 1e-12)  
     return img
 
 def pfa_per_polar(
@@ -79,7 +83,7 @@ def pfa_per_polar(
     is_rotated_dataset = abs(cos_t.mean()) > abs(sin_t.mean())
 
     if is_rotated_dataset:
-        print("Dataset is rotated. Swapping internal axes for processing...")
+        print("Data is rotated compared to what PFA expects. Swapping internal axes for processing...")
         Ku_list, Kr_list = Kr_list, Ku_list
         u_min, r_min = r_min, u_min
         u_max, r_max = r_max, u_max
@@ -123,13 +127,13 @@ def pfa_per_polar(
     for i in range(len(channel_signals)):
         
         # -- 3.1) ALLOCATE AND COPY CHANNEL -- 
-        
+         
         sig = torch.from_numpy(channel_signals[i].astype(np.complex64)).cfloat().to(device) # don't move until needed
         pvp = channel_pvps[i]
         fxc = channel_fxcs[i]
         
-        # -- 3.2) CORRECT AND APPLY PHASE CORRECTION FOR STEP CENTER FREQUENCIES
-
+        # -- 3.2) CALC AND APPLY PHASE CORRECTION FOR STEP CENTER FREQUENCIES
+        
         tau        = pvp["RcvTime"] - ref_rcv_time
         fc_global  = (cphd_meta.global_fx_min + cphd_meta.global_fx_max) / 2.0
         tau_tensor = torch.as_tensor(tau, dtype=torch.float64, device=device)
@@ -138,7 +142,7 @@ def pfa_per_polar(
         sig        = sig * corr_term.to(sig.dtype)
 
         # -- 3.3) CZT-NUFFT PFA EACH CHANNEL --
-
+        
         grid_2d = process_cztnufft(
             signal=sig,
             pvp=pvp,
@@ -165,6 +169,9 @@ def pfa_per_polar(
         
         del sig
         del grid_2d
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
 
     # -- 4.) BACK TO IMAGE SPACE WITH KAISSER-BESSEL SPOTLIGHT INTENSITY CORRECTION --
     
@@ -172,7 +179,7 @@ def pfa_per_polar(
     img_cpu = combined_img.cpu().numpy().astype(np.complex64)
     
     # -- 5.) CLEAN UP FOR POLARIZATION --
-
+    
     del combined_grid
     del combined_img
     if torch.cuda.is_available():
