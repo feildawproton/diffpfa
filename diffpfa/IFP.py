@@ -23,7 +23,10 @@ def _cartesian_to_geodetic(x: np.ndarray) -> np.ndarray:
     lon = np.arctan2(x[1], x[0])
     lat = np.arctan2((x[2] + ep2 * b * np.sin(th)**3), (p - e2 * a * np.cos(th)**3))
     n = a / np.sqrt(1 - e2 * np.sin(lat)**2)
-    alt = p / np.cos(lat) - n
+    if np.abs(lat) < np.pi / 4:
+        alt = p / np.cos(lat) - n
+    else:
+        alt = x[2] / np.sin(lat) - n + e2 * n
     return np.array([lat, lon, alt])
 
 def _read_single_channel(cphd_path: str, ch_id: str, fxc: float, domain_type: str):
@@ -217,9 +220,13 @@ class IFAProcessor:
             d = sub(grid, dir_name)
             uv = sub(d, "UVectECF")
             if dir_name == "Row":
-                sub(uv, "X", "1.0"); sub(uv, "Y", "0.0"); sub(uv, "Z", "0.0")
+                sub(uv, "X", str(cphd_meta.uIAX[0]))
+                sub(uv, "Y", str(cphd_meta.uIAX[1]))
+                sub(uv, "Z", str(cphd_meta.uIAX[2]))
             else:
-                sub(uv, "X", "0.0"); sub(uv, "Y", "1.0"); sub(uv, "Z", "0.0")
+                sub(uv, "X", str(cphd_meta.uIAY[0]))
+                sub(uv, "Y", str(cphd_meta.uIAY[1]))
+                sub(uv, "Z", str(cphd_meta.uIAY[2]))
             sub(d, "SS", str(ss))
             sub(d, "ImpRespWid", str(1.0 / max(1e-12, bw)))
             sub(d, "Sgn", "-1")

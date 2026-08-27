@@ -10,7 +10,7 @@ from diffpfa.IFA.channel.nufft_torch import nufft_grid_1d
 from diffpfa.constants import SPEED_OF_LIGHT
 from diffpfa.types import CPHDMetadata
 
-def _deskew_rvp(signal: torch.Tensor, pvp: dict, N_samples: int, device: str) -> torch.Tensor:
+def _deskew_rvp(signal: torch.Tensor, fxc: float, pvp: dict, N_samples: int, device: str) -> torch.Tensor:
     """
     remove residual video phase (RVP) caused by stretch processing (deramping)
     phase_rvp = pi*(F^2 / gamma)
@@ -24,13 +24,15 @@ def _deskew_rvp(signal: torch.Tensor, pvp: dict, N_samples: int, device: str) ->
             scss = torch.as_tensor(pvp["SCSS"], dtype=torch.float64, device=device)
             k_idx = torch.arange(N_samples, dtype=torch.float64, device=device)
             F_hz = sc0.unsqueeze(1) + scss.unsqueeze(1) * k_idx.unsqueeze(0)
-            rvp_phase = torch.pi * (F_hz ** 2) / gamma.unsqueeze(1)
+            F_v = F_hz - fxc
+            rvp_phase = torch.pi * (F_v ** 2) / gamma.unsqueeze(1)
             rvp_term = torch.exp(torch.complex(torch.zeros_like(rvp_phase), rvp_phase))
             signal = signal * rvp_term.to(signal.dtype)
     return signal
 
 def process_cztnufft(
     signal: torch.Tensor,
+    fxc: float,
     pvp: dict,
     Ku: torch.Tensor,
     Kr: torch.Tensor,
@@ -46,7 +48,7 @@ def process_cztnufft(
 
     N_samples = signal.shape[-1]
     
-    signal = _deskew_rvp(signal, pvp, N_samples, device)
+    signal = _deskew_rvp(signal, fxc, pvp, N_samples, device)
     
     dK_u = 1 / L_u
     dK_r = 1 / L_r

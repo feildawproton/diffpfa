@@ -28,13 +28,12 @@ def _apply_ifft_and_deconv(grid: torch.Tensor, M_u: int, M_r, device: str) -> to
     J = 6
     real_dtype = torch.float64
     
+    beta_tensor = torch.tensor(beta, dtype=real_dtype, device=device)
     grid_coords = (torch.arange(M_u, device=device, dtype=real_dtype) - M_u / 2.0) / M_u
     deconv = torch.i0(
             torch.sqrt(
                 torch.clamp(
-                    torch.tensor(beta, 
-                                 dtype=real_dtype, 
-                                 device=device)**2 - (math.pi * J * grid_coords)**2, min=1e-12)))
+                    beta_tensor**2 - (math.pi * J * grid_coords)**2, min=1e-12))) / torch.i0(beta_tensor)
     # Divide IN-PLACE to save allocating another full-size image tensor
     img.div_(deconv.unsqueeze(1) + 1e-12)  
     return img
@@ -145,6 +144,7 @@ def pfa_per_polar(
         
         grid_2d = process_cztnufft(
             signal=sig,
+            fxc=fxc,
             pvp=pvp,
             Ku = Ku_list[i],
             Kr = Kr_list[i],
