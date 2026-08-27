@@ -47,10 +47,11 @@ def pfa_per_polar(
     cphd_meta, 
     u_min: float, u_max: float, r_min: float, r_max: float,
     custom_pixel_spacing: Optional[Tuple[float, float]] = None,
+    image_oversample: float = 1.0,
     image_plane: str = "Ground",
     czt_batch_size: int = 1024,
     device: str = "cuda"
-) -> Tuple[np.ndarray, float, float, int, int]:
+) -> Tuple[torch.Tensor, float, float, int, int]:
     """
     takes in data on cpu, including numpy arrays
     allocates gpu shared kspace and image space
@@ -112,8 +113,8 @@ def pfa_per_polar(
     if custom_pixel_spacing is not None:
         du, dr = custom_pixel_spacing
     else:
-        du = 1.0 / max(bw_u, 1e-6)
-        dr = 1.0 / max(bw_r, 1e-6)
+        du = 1.0 / (max(bw_u, 1e-6) * image_oversample)
+        dr = 1.0 / (max(bw_r, 1e-6) * image_oversample)
         
     N_u = next_fast_len(int(np.round(L_u / du))) # be kind to FFTs
     N_r = next_fast_len(int(np.round(L_r / dr)))
@@ -185,12 +186,15 @@ def pfa_per_polar(
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
-    # -- 6.) FLIP BACK IN CASE WE FLIPPED PREVIOUSLY -- 
-
-    if is_rotated_dataset:
-        # Flip the image and the metadata back to their true orientation
+    # -- 6.) TRANSPOSE TO (RANGE, AZIMUTH) FOR SICD ROW/COL MAPPING --
+    
+    if not is_rotated_dataset:
+        # Natively processed as (uIAX, uIAY). Transpose to (uIAY, uIAX) -> (Range, Azm)
         img_cpu = img_cpu.T
         bw_u, bw_r = bw_r, bw_u
         N_u, N_r = N_r, N_u
 
-    return img_cpu, bw_u, bw_r, N_u, N_r
+    bw_range, bw_azm = bw_u, bw_r
+    N_range, N_azm = N_u, N_r
+
+    return img_cpu, bw_range, bw_azm, N_range, N_azm

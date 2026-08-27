@@ -52,11 +52,13 @@ def _read_single_channel(cphd_path: str, ch_id: str, fxc: float, domain_type: st
     return sig_np, pvp_dict, fxc, domain_type
 
 class IFAProcessor:
-    def __init__(self, cphd_path: str, output_dir: str, image_area_mode: str = "ImageArea", custom_pixel_spacing: Optional[Tuple[float, float]] = None, device: str = "cuda"):
+    def __init__(self, cphd_path: str, output_dir: str, image_area_mode: str = "ImageArea", custom_pixel_spacing: Optional[Tuple[float, float]] = None, image_plane: str = "SLANT", image_oversample: float = 1.25, device: str = "cuda"):
         self.cphd_path = cphd_path
         self.output_dir = output_dir
         self.image_area_mode = image_area_mode
         self.custom_pixel_spacing = custom_pixel_spacing
+        self.image_plane = image_plane
+        self.image_oversample = image_oversample
         self.device = device
         
     def _read_metadata(self, reader) -> CPHDMetadata:
@@ -88,6 +90,8 @@ class IFAProcessor:
         srp_ecf = xml_helper.load("./{*}ReferenceGeometry/{*}SRP/{*}ECF")
         arp_pos = xml_helper.load("./{*}ReferenceGeometry/{*}Monostatic/{*}ARPPos")
         arp_vel = xml_helper.load("./{*}ReferenceGeometry/{*}Monostatic/{*}ARPVel")
+        side_of_track = xml_helper.load("./{*}ReferenceGeometry/{*}Monostatic/{*}SideOfTrack")
+        side_of_track = str(side_of_track) if side_of_track is not None else "L"
 
         line_spacing = xml_helper.load("./{*}SceneCoordinates/{*}ImageGrid/{*}IAXExtent/{*}LineSpacing")
         sample_spacing = xml_helper.load("./{*}SceneCoordinates/{*}ImageGrid/{*}IAYExtent/{*}SampleSpacing")
@@ -111,6 +115,7 @@ class IFAProcessor:
             srp_ecf=srp_ecf,
             arp_pos_coa=arp_pos,
             arp_vel_coa=arp_vel,
+            side_of_track=side_of_track,
             line_spacing=line_spacing,
             sample_spacing=sample_spacing,
             raw_meta=xmltree,
@@ -131,7 +136,7 @@ class IFAProcessor:
             r_min, r_max = -100.0, 100.0
         return u_min, u_max, r_min, r_max
         
-    def _write_sicd(self, output_path: str, img_cpu: np.ndarray, cphd_meta, tx_pol, rcv_pol, bw_u, bw_r, N_u, N_r, u_min, r_min, du, dr):
+    def _write_sicd(self, output_path: str, img_cpu: np.ndarray, cphd_meta, tx_pol, rcv_pol, bw_range, bw_azm, N_range, N_azm, u_min, r_min, du_azm, dr_range):
         
         num_rows, num_cols = img_cpu.shape
         
@@ -188,8 +193,8 @@ class IFAProcessor:
 
         # Approximate Image Corners for NITF headers
         ic = sub(geo_data, "ImageCorners")
-        row_extent = num_rows * du
-        col_extent = num_cols * dr
+        row_extent = num_rows * dr_range
+        col_extent = num_cols * du_azm
         r_deg = row_extent / 6378137.0 * 180.0 / np.pi
         c_deg = col_extent / (6378137.0 * max(0.01, np.cos(lat_rad))) * 180.0 / np.pi
         
@@ -211,22 +216,18 @@ class IFAProcessor:
 
 
         grid = sub(root, "Grid")
-        sub(grid, "ImagePlane", "GROUND")
+        sub(grid, "ImagePlane", self.image_plane.upper())
         sub(grid, "Type", "PLANE")
         time_coa = sub(grid, "TimeCOAPoly", order1="0", order2="0")
         sub(time_coa, "Coef", "0.0", exponent1="0", exponent2="0")
         
-        for dir_name, ss, bw in [("Row", du, bw_u), ("Col", dr, bw_r)]:
+        # Row maps to Range (uIAY), Col maps to Azimuth (uIAX)
+        for dir_name, ss, bw, uvect in [("Row", dr_range, bw_range, cphd_meta.uIAY), ("Col", du_azm, bw_azm, cphd_meta.uIAX)]:
             d = sub(grid, dir_name)
             uv = sub(d, "UVectECF")
-            if dir_name == "Row":
-                sub(uv, "X", str(cphd_meta.uIAX[0]))
-                sub(uv, "Y", str(cphd_meta.uIAX[1]))
-                sub(uv, "Z", str(cphd_meta.uIAX[2]))
-            else:
-                sub(uv, "X", str(cphd_meta.uIAY[0]))
-                sub(uv, "Y", str(cphd_meta.uIAY[1]))
-                sub(uv, "Z", str(cphd_meta.uIAY[2]))
+            sub(uv, "X", str(uvect[0]))
+            sub(uv, "Y", str(uvect[1]))
+            sub(uv, "Z", str(uvect[2]))
             sub(d, "SS", str(ss))
             sub(d, "ImpRespWid", str(1.0 / max(1e-12, bw)))
             sub(d, "Sgn", "-1")
@@ -296,7 +297,7 @@ class IFAProcessor:
         arp_acc = sub(scpcoa, "ARPAcc")
         sub(arp_acc, "X", "0.0"); sub(arp_acc, "Y", "0.0"); sub(arp_acc, "Z", "0.0")
         
-        sub(scpcoa, "SideOfTrack", "L")
+        sub(scpcoa, "SideOfTrack", cphd_meta.side_of_track)
         sub(scpcoa, "SlantRange", "0.0")
         sub(scpcoa, "GroundRange", "0.0")
         sub(scpcoa, "DopplerConeAng", "90.0")
@@ -334,6 +335,25 @@ class IFAProcessor:
         with open(self.cphd_path, "rb") as f:
             reader = skcphd.Reader(f)
             cphd_meta = self._read_metadata(reader)
+            
+            if self.image_plane.upper() == "SLANT":
+                srp = cphd_meta.srp_ecf
+                arp = cphd_meta.arp_pos_coa
+                arp_v = cphd_meta.arp_vel_coa
+                
+                p_vec = srp - arp
+                u_row = p_vec / np.linalg.norm(p_vec)
+                
+                u_v = arp_v / np.linalg.norm(arp_v)
+                u_col_unnorm = u_v - np.dot(u_v, u_row) * u_row
+                u_col = u_col_unnorm / np.linalg.norm(u_col_unnorm)
+                
+                if cphd_meta.side_of_track == "L":
+                    u_col = -u_col
+                
+                cphd_meta.uIAX = u_col
+                cphd_meta.uIAY = u_row
+                self.custom_pixel_spacing = None
             
             xmltree = reader.metadata.xmltree
             channels = xmltree.findall(".//{*}Data/{*}Channel")
@@ -410,7 +430,7 @@ class IFAProcessor:
                 read_time += stop_copy - start_copy
 
                 print("Calling IFP_PerPolar...")
-                img_cpu, bw_u_actual, bw_r_actual, N_u, N_r = pfa_per_polar(
+                img_cpu, bw_range, bw_azm, N_range, N_azm = pfa_per_polar(
                     channel_signals=channel_signals,
                     channel_pvps=channel_pvps,
                     channel_fxcs=channel_fxcs,
@@ -422,6 +442,7 @@ class IFAProcessor:
                     r_min=r_min,
                     r_max=r_max,
                     custom_pixel_spacing=active_spacing,
+                    image_oversample=self.image_oversample,
                     device=self.device
                 )
 
@@ -433,11 +454,11 @@ class IFAProcessor:
                 out_name = f"{name}_SICDU_{tx_pol}_{rcv_pol}.nitf"
                 out_path = os.path.join(self.output_dir, out_name)
                 
-                du = (u_max - u_min) / N_u
-                dr = (r_max - r_min) / N_r
+                du_azm = (u_max - u_min) / N_azm
+                dr_range = (r_max - r_min) / N_range
                 
                 print(f"Writing {out_name}...")
-                self._write_sicd(out_path, img_cpu, cphd_meta, tx_pol, rcv_pol, bw_u_actual, bw_r_actual, N_u, N_r, u_min, r_min, du, dr)
+                self._write_sicd(out_path, img_cpu, cphd_meta, tx_pol, rcv_pol, bw_range, bw_azm, N_range, N_azm, u_min, r_min, du_azm, dr_range)
                 output_files.append(out_path)
                 write_time += (time.perf_counter() - stop_proc)
 

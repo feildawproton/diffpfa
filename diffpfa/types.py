@@ -29,6 +29,7 @@ class CPHDMetadata:
     srp_ecf: np.ndarray
     arp_pos_coa: Optional[np.ndarray]
     arp_vel_coa: Optional[np.ndarray]
+    side_of_track: str
     line_spacing: Optional[float]
     sample_spacing: Optional[float]
     raw_meta: ET.Element

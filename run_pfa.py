@@ -18,6 +18,7 @@ def run_pfa(cphd_path, output_dir):
         cphd_path=cphd_path,
         output_dir=output_dir,
         image_area_mode="ImageArea",
+        image_plane="SLANT",
         device="cuda"
     )
     with torch.inference_mode():
