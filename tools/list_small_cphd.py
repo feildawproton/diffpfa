@@ -47,8 +47,8 @@ for line in process.stdout:
 
 process.wait()
 
-# Keep only those with a .cphd and sort by .cphd size
-cphd_files = [(base, data['cphd'], data.get('nitf')) for base, data in files.items() if 'cphd' in data]
+# Keep only those with a .cphd >= 1GB (~1,000,000,000 bytes) and sort by .cphd size
+cphd_files = [(base, data['cphd'], data.get('nitf')) for base, data in files.items() if 'cphd' in data and data['cphd'] >= 1_000_000_000]
 cphd_files.sort(key=lambda x: x[1])
 
 print(f"{'#':<3} | {'Base Path':<73} | {'CPHD Size':<12} | {'SICD Size':<12}")
