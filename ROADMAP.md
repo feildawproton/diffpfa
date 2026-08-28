@@ -29,16 +29,17 @@ def _apply_scp_shift(signal, F_hz, P_vecs_orig, u_c, r_c, uIAX, uIAY):
 ```
 
 ## 3. Radiometric Calibration
-Currently, `diffpfa` generates uncalibrated SICD images (the `<Radiometric>` element is omitted). For downstream analysis tools, we will need to compute and populate absolute radiometric scaling polynomials. 
+`diffpfa` now generates a mathematically balanced, relative `<Radiometric>` block. Because absolute system transmit powers and range losses are not currently extracted from the CPHD, the `RCSSFPoly` (Radar Cross Section Scale Factor) defaults to a flat `1.0`.
 
-**Plan:**
-1. Determine the projected area of each pixel using the image plane geometry and local grazing/incidence angles.
-2. Apply system gains, range loss, and transmit power (available in CPHD but not directly translatable without geometry) to convert raw pixel power into absolute Radar Cross Section (RCS).
-3. Compute the constant (or 2D polynomial) scalar values and inject them into the SICD output:
-   - `RCSSFPoly`: Converts pixel power to $m^2$.
-   - `SigmaZeroSFPoly`: $\sigma^0$ (RCS per unit ground area).
-   - `BetaZeroSFPoly`: $\beta^0$ (RCS per unit slant area).
-   - `GammaZeroSFPoly`: $\gamma^0$ (RCS per unit area projected onto the line-of-sight plane).
+However, the geometric scale factors are correctly balanced using the pixel area and grazing angles:
+- `BetaZeroSFPoly` ($\beta^0$): `1.0 / (RowSpacing * ColSpacing)`
+- `SigmaZeroSFPoly` ($\sigma^0$): `BetaZeroSFPoly * cos(GrazeAng)`
+- `GammaZeroSFPoly` ($\gamma^0$): `BetaZeroSFPoly * sin(GrazeAng)`
+
+This prevents strict downstream ATR apps from crashing and ensures that the physical ratio of power between the Slant, Ground, and LOS planes is completely preserved!
+
+**Backlog (Absolute Calibration):**
+- Extract transmit power, antenna patterns, and receiver noise from the CPHD to calculate the absolute `RCSSFPoly` gain, replacing the `1.0` placeholder and converting the pixel values into true square-meters ($m^2$).
 
 ## 4. Full IPR Metadata Generation
 To fully support downstream exploitation algorithms (like CLEAN and autofocus), the output SICD must mathematically describe the space-variant 2D Impulse Response (IPR) of the image. 
@@ -52,12 +53,11 @@ Currently, `diffpfa` forms the image but does not write the detailed K-space and
 4. **Calculate Space-Variant Polynomials**: Generate and write `<PolarAngPoly>` and `<SpatialFreqSFPoly>` inside the `<PFA>` block. These tell downstream tools exactly how the K-space annulus rotates and scales across the image, allowing them to perfectly reconstruct the space-variant 2D IPR at any pixel coordinate.
 
 ## 5. Complete Geometric Metadata for Geolocation
-The current SICD generator uses hardcoded placeholders for several metadata fields that are mathematically tedious to derive but absolutely required for downstream image-to-scene projection (geolocation) and RCS calibration.
+- `SlantRange`, `GroundRange`, `DopplerConeAng`, `GrazeAng`, `IncidenceAng`, `AzimAng`, and `SlopeAng` have been mathematically implemented for the Scene Center Point at Center of Aperture (COA).
 
-**Plan:**
-- **SCPCOA Block**: Compute `SlantRange`, `GroundRange`, `DopplerConeAng`, `GrazeAng`, and `IncidenceAng` from the CPHD Sensor Reference Point (SRP) and Aperture Reference Point (ARP) vectors.
-- **ARPPoly**: Fit and extract the precise ARP position, velocity, and acceleration vectors as a polynomial from the raw CPHD geometry.
-- **Collection Info**: Ensure `CollectStart` strictly uses the CPHD `CollectionStart` time (currently uses `datetime.now()`) and ensure `ImageFormAlgo` is explicitly marked as `"PFA"`.
+**Backlog / Future Implementation:**
+- **TwistAng & LayoverAng**: Requires deriving the projection of the cross-range vector and vertical structure lean relative to the chosen image plane.
+- **ARPPoly & ARPAcc**: Requires extracting the full Position Velocity Parameter (PVP) history (TxPos, TyPos, TzPos) across the dwell time and performing a polynomial fit, rather than just extracting the single COA point. Currently hardcoded to `0.0`.
 
 ## 6. Optimization: PyTorch Memory Strategy
 The `pfa_per_polar` loop creates massive intermediate tensors (CZT and NUFFT grids) that quickly exceed VRAM limits on wideband, multi-channel datasets. 
