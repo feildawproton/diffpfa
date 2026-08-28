@@ -52,3 +52,17 @@ Image projections relate the 2D image pixel grid to the 3D geolocated scene. Pro
 - **Image-to-Scene Projection**: Maps a specific image grid location to a 3D geolocated point on a scene surface (e.g., a constant Height Above Ellipsoid (HAE) surface or a Digital Elevation Model (DEM)). This involves intersecting the precise R/Rdot contour for the given pixel with the scene surface, often solved iteratively.
 - **Scene-to-Image Projection**: Maps a geolocated 3D point in the scene to a 2D image pixel grid location. This iterative approach computes a sequence of ground plane points projected along straight lines to the image plane until converging on the precise image grid location.
 - **Simple Ground Plane Projection**: A computationally faster, less rigorous projection used for general resampling (e.g., generating overview images). It assumes the image grid is uniformly spaced in the image plane and projects along straight lines to the ground plane, yielding high accuracy near the SCP that degrades slowly towards the edges.
+
+### 5. Radiometric Calibration (Radiometric Block)
+The `<Radiometric>` XML element is optional but critical for generating calibrated physical images. It contains polynomial fields to scale raw complex pixel power values into formal metrics of Radar Cross Section (RCS) and normalized clutter properties. 
+- **RCSSFPoly**: Radar Cross Section Scale Factor (converts pixel power to absolute $m^2$).
+- **SigmaZeroSFPoly**: $\sigma^0$ Scale Factor (RCS per unit area projected on the local tangent plane).
+- **BetaZeroSFPoly**: $\beta^0$ Scale Factor (RCS per unit slant area).
+- **GammaZeroSFPoly**: $\gamma^0$ Scale Factor (RCS per unit area projected onto the line-of-sight plane).
+Note: These values are 2D polynomials dependent on local incidence/grazing geometry and are strictly calculated during the image formation projection phase (they cannot exist in unformed data formats like CPHD).
+
+### 6. Impulse Response (IPR) Metadata
+The SICD standard explicitly stores enough mathematical detail to exactly recreate the 2D spatial Impulse Response (IPR) for any specific pixel in the image. This is heavily utilized by downstream exploitation algorithms (e.g., CLEAN, Autofocus) to deconvolve targets.
+1. **Waveform Abstraction (The "Rect" Assumption)**: SICD assumes the raw radar data was successfully pulse-compressed (matched filtered). As long as the spectrum is equalized, the originating waveform (LFM, Phase-coded) becomes irrelevant. The IPR is strictly a function of the spatial frequency support and the digital weighting function.
+2. **Weighting Functions**: Found in `<Grid><Row><WgtFunct>` and `<Grid><Col><WgtFunct>`, these contain the exact, discrete arrays of the 1D separable digital windows applied (e.g., Taylor, Kaiser-Bessel) prior to the IFFT.
+3. **Space-Variant PFA Support**: For PFA images, the IPR shape and rotation shears spatially across the image. The `<PFA>` block contains base polar annulus limits (`Krg1/2`, `Kaz1/2`) and critically provides `<PolarAngPoly>` and `<SpatialFreqSFPoly>` as functions of Center of Aperture (COA) time. By using a pixel's `<TimeCOAPoly>` evaluated time, an analyst can calculate the exact scaled/rotated K-space limits for that specific pixel and multiply it by the `<WgtFunct>` to generate the mathematically perfect space-variant 2D IPR.

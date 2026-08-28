@@ -15,9 +15,9 @@ The primary entry point is `run_pfa.py`, designed to batch process directories o
 python run_pfa.py --input_dir /path/to/cphds --output_dir /path/to/output_sicds
 ```
 
-To convert the generated SICD files to 8-bit PNG images (using a density remapper), run:
+To convert the generated SICD files to 8-bit PNG images (using sarpy's density remapper), run:
 ```bash
-python visualize_results.py /path/to/output_sicds
+python tools/convert2png.py /path/to/output_sicds/image.nitf /path/to/output.png
 ```
 
 ## Architecture
@@ -34,9 +34,6 @@ The pipeline is split between I/O + state and processing to separate concerns an
 - **RVP Deskew**: Corrects Residual Video Phase artifacts present in stretch-processed data, while bypassing the step if the data was processed with downconversion + matched filter.
 - **In-Place Accumulation**: Disjoint subbands are projected onto a shared Cartesian K-space grid. Incoming channels are processed sequentially into an accumulator and discarded from RAM immediately, enforcing a minimal memory footprint. Coherently summing channels prior to the 2D IFFT and spatial deconvolution reduces total computational overhead (repeated 2D IFFTs for each channel).
 
-## Validation and Testing
-The `simulation/` directory contains tools (`benchmark_kspace.py`, `simulate_stepped_chirp.py`) for generating synthetic data. This enables direct testing of subband phase alignment and coherent combination and inspecting improvements in spatial resolution (e.g., main lobe FWHM halving when combining two contiguous subbands).
-
 ## Notes on Optimization
-- **Memory Handling**: Need to manage PyTorch's Caching Allocator. Deletion of intermediate tensors between channels and careful use of `torch.cuda.empty_cache()` are used to prevent memory fragmentation on wideband, multi-channel collections.
+- **Memory Handling**: Need to manage PyTorch's Caching Allocator. Deletion of intermediate tensors between channels and explicit use of `torch.cuda.empty_cache()` are heavily utilized to prevent memory fragmentation on wideband, multi-channel collections (prioritizing OOM-safety over caching speed).
 - **Separating I/O**: The pipeline delineates `setup_and_read_time` from `proc_time` and 'write_time' to isolate disk performance from CPU+GPU throughput; useful for determining where the juice is worth the squeeze (depends on deployed system).

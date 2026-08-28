@@ -13,17 +13,14 @@ dependencies = [
     "numpy",
     "scipy",
     "lxml",
-    "matplotlib"
+    "matplotlib",
+    "sarkit"
 ]
 
 [project.optional-dependencies]
-sarkit = ["sarkit"]
 sarpy = ["sarpy"]
 all = ["sarkit", "sarpy"]
 dev = ["pytest"]
-
-[project.scripts]
-diffpfa = "diffpfa.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

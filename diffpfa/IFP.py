@@ -446,6 +446,8 @@ class IFAProcessor:
                     device=self.device
                 )
 
+                img_cpu = img_cpu.T # either SICD wants different x-y than natural from cphd or i'm confused as usual
+
                 stop_proc = time.perf_counter()
                 proc_time += stop_proc - stop_copy
 

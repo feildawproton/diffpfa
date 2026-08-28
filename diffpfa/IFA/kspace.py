@@ -14,7 +14,7 @@ def _compute_look_vectors(pvp: Dict[str, np.ndarray], device: torch.device = tor
     tx        = torch.as_tensor(pvp["TxPos"], dtype=torch.float64, device=device)
     phse_cntr = 0.5 * (tx + rcv)    # Bistatic / APC midpoint
     P_vecs    = srp - phse_cntr     # Vector from phase center to SRP
-
+    #P_vecs    = phse_cntr - srp
     return P_vecs
 
 def _compute_look_components(

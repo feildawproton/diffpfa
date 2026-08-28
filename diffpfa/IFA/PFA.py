@@ -30,10 +30,16 @@ def _apply_ifft_and_deconv(grid: torch.Tensor, M_u: int, M_r, device: str) -> to
     
     beta_tensor = torch.tensor(beta, dtype=real_dtype, device=device)
     grid_coords = (torch.arange(M_u, device=device, dtype=real_dtype) - M_u / 2.0) / M_u
-    deconv = torch.i0(
-            torch.sqrt(
-                torch.clamp(
-                    beta_tensor**2 - (math.pi * J * grid_coords)**2, min=1e-12))) / torch.i0(beta_tensor)
+    z2 = beta_tensor**2 - (math.pi * J * grid_coords)**2
+    sqrt_pos = torch.sqrt(torch.clamp(z2, min=1e-12))
+    sqrt_neg = torch.sqrt(torch.clamp(-z2, min=1e-12))
+    deconv = torch.where(
+        z2 >= 0,
+        torch.sinh(sqrt_pos) / sqrt_pos,
+        torch.sin(sqrt_neg) / sqrt_neg
+    )
+    deconv = deconv / (torch.sinh(beta_tensor) / beta_tensor)
+    
     # Divide IN-PLACE to save allocating another full-size image tensor
     img.div_(deconv.unsqueeze(1) + 1e-12)  
     return img
@@ -187,14 +193,12 @@ def pfa_per_polar(
         torch.cuda.empty_cache()
 
     # -- 6.) TRANSPOSE TO (RANGE, AZIMUTH) FOR SICD ROW/COL MAPPING --
-    
-    if not is_rotated_dataset:
-        # Natively processed as (uIAX, uIAY). Transpose to (uIAY, uIAX) -> (Range, Azm)
-        img_cpu = img_cpu.T
-        bw_u, bw_r = bw_r, bw_u
-        N_u, N_r = N_r, N_u
-
-    bw_range, bw_azm = bw_u, bw_r
-    N_range, N_azm = N_u, N_r
+    if is_rotated_dataset:
+        bw_range, bw_azm = bw_u, bw_r
+        N_range, N_azm = N_u, N_r
+    else:
+        bw_range, bw_azm = bw_r, bw_u
+        N_range, N_azm = N_r, N_u
 
     return img_cpu, bw_range, bw_azm, N_range, N_azm
+

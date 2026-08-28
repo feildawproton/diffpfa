@@ -72,16 +72,18 @@ def nufft_grid_1d(
         gx_idx_b = ((kx_b - k_center) / dK) + (M / 2.0)
         
         half_J = J / 2.0
-        j_offsets = torch.arange(-math.floor(half_J), math.ceil(half_J), device=device, dtype=real_dtype)
+        j_offsets = torch.arange(-math.ceil(half_J), math.ceil(half_J) + 1, device=device, dtype=torch.long)
         
         col_idx = torch.arange(b_end - b, device=device).unsqueeze(0).expand(N_pts, b_end - b)
         grid_b = torch.zeros((M, b_end - b), dtype=signal.dtype, device=device)
         
+        ix0 = torch.floor(gx_idx_b).to(torch.long)
         for jx in j_offsets:
-            ix = torch.floor(gx_idx_b + jx).to(torch.long)
+            ix = ix0 + jx
             mask = (ix >= 0) & (ix < M)
             
-            wx = kaiser_bessel_kernel_1d((gx_idx_b - ix.to(real_dtype)), J=J, beta=beta)
+            dist = gx_idx_b - ix.to(real_dtype)
+            wx = kaiser_bessel_kernel_1d(dist, J=J, beta=beta)
             
             flat_idx = ix[mask] * (b_end - b) + col_idx[mask]
             grid_b.view(-1).index_add_(0, flat_idx, sig_b[mask] * wx[mask])
