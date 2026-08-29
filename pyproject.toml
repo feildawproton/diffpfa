@@ -13,14 +13,12 @@ dependencies = [
     "numpy",
     "scipy",
     "lxml",
-    "matplotlib",
     "sarkit"
 ]
 
 [project.optional-dependencies]
-sarpy = ["sarpy"]
-all = ["sarkit", "sarpy"]
-dev = ["pytest"]
+viz = ["matplotlib", "pillow"]
+dev = ["pytest", "matplotlib", "pillow"]
 
 [tool.setuptools.packages.find]
 where = ["."]
