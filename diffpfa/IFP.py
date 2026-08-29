@@ -533,7 +533,7 @@ class IFAProcessor:
                 # 2. Fall back to CPHD suggested grid spacing
                 # 3. Fall back to None (let pfa_per_polar calculate Nyquist limit)
                 active_spacing = self.custom_pixel_spacing
-                if active_spacing is None and cphd_meta.line_spacing and cphd_meta.sample_spacing:
+                if active_spacing is None and self.image_plane == "GROUND":
                     active_spacing = (cphd_meta.line_spacing, cphd_meta.sample_spacing)
 
                 stop_copy = time.perf_counter()
