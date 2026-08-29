@@ -14,7 +14,7 @@ def run_pfa(cphd_path, output_dir):
     os.makedirs(output_dir, exist_ok=True)
 
     t0_setup = time.perf_counter()
-    processor = IFAProcessor(cphd_path=cphd_path, output_dir=output_dir)
+    processor = IFAProcessor(cphd_path=cphd_path, output_dir=output_dir, batch_size=256)
     with torch.inference_mode():
         out_paths, internal_read_time, proc_time, write_time = processor.run()
     

@@ -37,11 +37,3 @@ Currently, `diffpfa` generates mathematically balanced, relative `<Radiometric>`
 **Future Goal:**
 Extract transmit power, antenna gain patterns, and receiver noise floor from the CPHD header/PVP to compute absolute `RCSSFPoly` gain, replacing the uncalibrated `1.0` placeholder to convert complex pixel values into physical radar cross section square-meters ($m^2$).
 
----
-
-## 3. Optimization: On-Demand PyTorch Memory Strategy
-Currently, `torch.cuda.empty_cache()` is called unconditionally at the end of each channel loop to prevent memory fragmentation and ensure OOM-safety across wideband collections.
-
-**Future Goal:**
-Wrap the channel loop in a `try...except torch.cuda.OutOfMemoryError:` block. If PyTorch's caching allocator fails to find a contiguous block, catch the exception, explicitly call `empty_cache()`, and retry the channel. This delivers the speed of an untampered cache while retaining the OOM safety net.
-

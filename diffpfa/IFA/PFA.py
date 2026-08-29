@@ -54,8 +54,7 @@ def pfa_per_polar(
     u_min: float, u_max: float, r_min: float, r_max: float,
     custom_pixel_spacing: Optional[Tuple[float, float]] = None,
     image_oversample: float = 1.0,
-    image_plane: str = "Ground",
-    czt_batch_size: int = 1024,
+    batch_size: int = 256,
     device: str = "cuda"
 ) -> Tuple[np.ndarray, float, float, int, int, bool]:
     """
@@ -147,23 +146,42 @@ def pfa_per_polar(
         corr_term  = torch.exp(1j * phase_corr).unsqueeze(1)
         sig        = sig * corr_term.to(sig.dtype)
 
-        # -- 3.3) CZT-NUFFT PFA EACH CHANNEL --
+        # -- 3.3) CZT-NUFFT PFA EACH CHANNEL (WITH ON-DEMAND OOM RECOVERY) --
         
-        grid_2d = process_cztnufft(
-            signal=sig,
-            fxc=fxc,
-            pvp=pvp,
-            Ku = Ku_list[i],
-            Kr = Kr_list[i],
-            N_u=N_u, 
-            N_r=N_r,
-            L_u=L_u,
-            L_r=L_r,
-            k_ctr_u=gku_ctr,
-            k_ctr_r=gkr_ctr,
-            czt_batch_size=czt_batch_size,
-            device=device
-        )
+        try:
+            grid_2d = process_cztnufft(
+                signal=sig,
+                fxc=fxc,
+                pvp=pvp,
+                Ku = Ku_list[i],
+                Kr = Kr_list[i],
+                N_u=N_u, 
+                N_r=N_r,
+                L_u=L_u,
+                L_r=L_r,
+                k_ctr_u=gku_ctr,
+                k_ctr_r=gkr_ctr,
+                batch_size=batch_size,
+                device=device
+            )
+        except torch.cuda.OutOfMemoryError:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            grid_2d = process_cztnufft(
+                signal=sig,
+                fxc=fxc,
+                pvp=pvp,
+                Ku = Ku_list[i],
+                Kr = Kr_list[i],
+                N_u=N_u, 
+                N_r=N_r,
+                L_u=L_u,
+                L_r=L_r,
+                k_ctr_u=gku_ctr,
+                k_ctr_r=gkr_ctr,
+                batch_size=batch_size,
+                device=device
+            )
         
         # -- 3.4) ADD THIS CHANNEL'S KSPACE TO GLOBAL KSPACE --
 
@@ -172,27 +190,30 @@ def pfa_per_polar(
         else:
             combined_grid.add_(grid_2d)     # add on subsequent channels
         
-        # -- 3.4) CLEAN UP PER CHANNEL        
+        # -- 3.5) CLEAN UP PER CHANNEL (NO UNCONDITIONAL SYNC, EMPYT CACHE CONDITINAL IN STEP 3.3) --
         
         del sig
         del grid_2d
+
+
+    # -- 4.) BACK TO IMAGE SPACE WITH KAISER-BESSEL SPOTLIGHT INTENSITY CORRECTION --
+    
+    try:
+        combined_img = _apply_ifft_and_deconv(combined_grid, N_u, N_r, device)
+    except torch.cuda.OutOfMemoryError:
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+        combined_img = _apply_ifft_and_deconv(combined_grid, N_u, N_r, device)
 
-
-    # -- 4.) BACK TO IMAGE SPACE WITH KAISSER-BESSEL SPOTLIGHT INTENSITY CORRECTION --
-    
-    combined_img = _apply_ifft_and_deconv(combined_grid, N_u, N_r, device)
     img_cpu = combined_img.cpu().numpy().astype(np.complex64)
     
-    # -- 5.) CLEAN UP FOR POLARIZATION --
+    # -- 5.) CLEAN UP FOR POLARIZATION (EMPTY CACHE NOW CONDITIONAL IN STEP 4 --
     
     del combined_grid
     del combined_img
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
 
-    # -- 6.) TRANSPOSE TO (RANGE, AZIMUTH) FOR SICD ROW/COL MAPPING --
+    # -- 6.) IF THE GROUND AXES PROVIDED ARE FLIPPED FROM EXPECTATION --
+
     if is_rotated_dataset:
         bw_range, bw_azm = bw_u, bw_r
         N_range, N_azm = N_u, N_r

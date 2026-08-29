@@ -42,7 +42,7 @@ def process_cztnufft(
     L_r: float,
     k_ctr_u: float,
     k_ctr_r: float,
-    czt_batch_size: int,
+    batch_size: int,
     device: str
 ) -> torch.Tensor:
 
@@ -67,7 +67,7 @@ def process_cztnufft(
         k_out_start=k_out_start_r,
         k_out_step=k_out_step_r,
         spatial_extent=L_r,
-        batch_size=czt_batch_size,
+        batch_size=batch_size,
     )
 
     cot_theta = Ku[:, N_samples//2] / Kr[:, N_samples//2]
@@ -80,7 +80,7 @@ def process_cztnufft(
         grid_size=N_u,
         L_x=L_u,
         k_center=k_ctr_u,
-        batch_size=czt_batch_size,
+        batch_size=batch_size,
     )
     return grid_2d
 

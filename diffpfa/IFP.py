@@ -52,13 +52,22 @@ def _read_single_channel(cphd_path: str, ch_id: str, fxc: float, domain_type: st
     return sig_np, pvp_dict, fxc, domain_type
 
 class IFAProcessor:
-    def __init__(self, cphd_path: str, output_dir: str, image_area_mode: str = "ImageArea", custom_pixel_spacing: Optional[Tuple[float, float]] = None, image_plane: str = "SLANT", image_oversample: float = 1.25, device: str = "cuda"):
+    def __init__(self, 
+                 cphd_path: str, 
+                 output_dir: str, 
+                 image_area_mode: str = "ImageArea", 
+                 custom_pixel_spacing: Optional[Tuple[float, float]] = None, 
+                 image_plane: str = "SLANT", 
+                 image_oversample: float = 1.25, 
+                 batch_size: int = 256,
+                 device: str = "cuda"):
         self.cphd_path = cphd_path
         self.output_dir = output_dir
         self.image_area_mode = image_area_mode
         self.custom_pixel_spacing = custom_pixel_spacing
         self.image_plane = image_plane
         self.image_oversample = image_oversample
+        self.batch_size=batch_size
         self.device = device
         
     def _read_metadata(self, reader) -> CPHDMetadata:
@@ -545,6 +554,7 @@ class IFAProcessor:
                     r_max=r_max,
                     custom_pixel_spacing=active_spacing,
                     image_oversample=self.image_oversample,
+                    batch_size=self.batch_size,
                     device=self.device
                 )
 
