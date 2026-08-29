@@ -136,7 +136,7 @@ class IFAProcessor:
             r_min, r_max = -100.0, 100.0
         return u_min, u_max, r_min, r_max
         
-    def _write_sicd(self, output_path: str, img_cpu: np.ndarray, cphd_meta, tx_pol, rcv_pol, bw_range, bw_azm, N_range, N_azm, u_min, r_min, du_azm, dr_range):
+    def _write_sicd(self, output_path: str, img_cpu: np.ndarray, cphd_meta, tx_pol, rcv_pol, bw_range, bw_azm, N_range, N_azm, u_min, r_min, du_azm, dr_range, ref_pvp: Optional[dict] = None, num_samples: Optional[int] = None, is_rotated: bool = False):
         
         num_rows, num_cols = img_cpu.shape
         
@@ -191,6 +191,10 @@ class IFAProcessor:
         sub(llh, "Lon", str(np.clip(lon_deg, -180.0, 180.0)))
         sub(llh, "HAE", str(hae))
 
+        # Determine Row/Col basis vectors based on orientation
+        u_row_vec = cphd_meta.uIAX if is_rotated else cphd_meta.uIAY
+        u_col_vec = cphd_meta.uIAY if is_rotated else cphd_meta.uIAX
+
         # Approximate Image Corners for NITF headers
         ic = sub(geo_data, "ImageCorners")
         row_extent = num_rows * dr_range
@@ -221,8 +225,8 @@ class IFAProcessor:
         time_coa = sub(grid, "TimeCOAPoly", order1="0", order2="0")
         sub(time_coa, "Coef", "0.0", exponent1="0", exponent2="0")
         
-        # Row maps to Range (uIAY), Col maps to Azimuth (uIAX)
-        for dir_name, ss, bw, uvect in [("Row", dr_range, bw_range, cphd_meta.uIAY), ("Col", du_azm, bw_azm, cphd_meta.uIAX)]:
+        # Row maps to Range, Col maps to Azimuth
+        for dir_name, ss, bw, uvect in [("Row", dr_range, bw_range, u_row_vec), ("Col", du_azm, bw_azm, u_col_vec)]:
             d = sub(grid, dir_name)
             uv = sub(d, "UVectECF")
             sub(uv, "X", str(uvect[0]))
@@ -237,7 +241,10 @@ class IFAProcessor:
             sub(d, "DeltaK2", str(bw / 2.0))
 
         timeline = sub(root, "Timeline")
-        from diffpfa.sicd_geometry import compute_scp_geometry, fit_arp_poly
+        from diffpfa.sicd_geometry import compute_scp_geometry, fit_arp_poly, compute_pfa_metadata
+        
+        # Fit ARP Poly and extract kinematics
+        pos_info = fit_arp_poly(ref_pvp) if ref_pvp is not None else fit_arp_poly(None)
         
         # Determine CollectStart from CPHD or fallback
         if cphd_meta.collection_start:
@@ -247,15 +254,17 @@ class IFAProcessor:
             collect_start = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
             
         sub(timeline, "CollectStart", collect_start)
-        sub(timeline, "CollectDuration", "0.0")
+        sub(timeline, "CollectDuration", f"{pos_info['CollectDuration']:.6f}")
 
-        # Fit ARP Poly (placeholder stub)
-        arp_poly = fit_arp_poly(cphd_meta.raw_meta)
+        # Position block with full polynomial
         pos = sub(root, "Position")
         arp = sub(pos, "ARPPoly")
-        x_elem = sub(arp, "X", order1="0"); sub(x_elem, "Coef", str(arp_poly["X"][0]), exponent1="0")
-        y_elem = sub(arp, "Y", order1="0"); sub(y_elem, "Coef", str(arp_poly["Y"][0]), exponent1="0")
-        z_elem = sub(arp, "Z", order1="0"); sub(z_elem, "Coef", str(arp_poly["Z"][0]), exponent1="0")
+        for coord in ["X", "Y", "Z"]:
+            coefs = pos_info["ARPPoly"][coord]
+            order_k = len(coefs) - 1
+            coord_elem = sub(arp, coord, order1=str(order_k))
+            for k, val in enumerate(coefs):
+                sub(coord_elem, "Coef", f"{val:.12e}", exponent1=str(k))
 
         radar_coll = sub(root, "RadarCollection")
         tx_freq = sub(radar_coll, "TxFrequency")
@@ -276,7 +285,7 @@ class IFAProcessor:
         sub(rcv_proc, "ChanIndex", "1")
         sub(img_form, "TxRcvPolarizationProc", f"{tx_pol}:{rcv_pol}")
         sub(img_form, "TStartProc", "0.0")
-        sub(img_form, "TEndProc", "0.0")
+        sub(img_form, "TEndProc", f"{pos_info['CollectDuration']:.6f}")
         tx_proc = sub(img_form, "TxFrequencyProc")
         sub(tx_proc, "MinProc", str(cphd_meta.global_fx_min))
         sub(tx_proc, "MaxProc", str(cphd_meta.global_fx_max))
@@ -287,41 +296,43 @@ class IFAProcessor:
         sub(img_form, "RgAutofocus", "NO")
         
         scpcoa = sub(root, "SCPCOA")
-        sub(scpcoa, "SCPTime", "0.0")
+        sub(scpcoa, "SCPTime", f"{pos_info['SCPTime']:.6f}")
         
         arp_pos = sub(scpcoa, "ARPPos")
-        if cphd_meta.arp_pos_coa is not None and len(cphd_meta.arp_pos_coa) == 3:
-            sub(arp_pos, "X", str(cphd_meta.arp_pos_coa[0]))
-            sub(arp_pos, "Y", str(cphd_meta.arp_pos_coa[1]))
-            sub(arp_pos, "Z", str(cphd_meta.arp_pos_coa[2]))
-        else:
-            sub(arp_pos, "X", "0.0"); sub(arp_pos, "Y", "0.0"); sub(arp_pos, "Z", "0.0")
+        sub(arp_pos, "X", f"{pos_info['ARPPos_COA'][0]:.6f}")
+        sub(arp_pos, "Y", f"{pos_info['ARPPos_COA'][1]:.6f}")
+        sub(arp_pos, "Z", f"{pos_info['ARPPos_COA'][2]:.6f}")
             
         arp_vel = sub(scpcoa, "ARPVel")
-        if cphd_meta.arp_vel_coa is not None and len(cphd_meta.arp_vel_coa) == 3:
-            sub(arp_vel, "X", str(cphd_meta.arp_vel_coa[0]))
-            sub(arp_vel, "Y", str(cphd_meta.arp_vel_coa[1]))
-            sub(arp_vel, "Z", str(cphd_meta.arp_vel_coa[2]))
-        else:
-            sub(arp_vel, "X", "1.0"); sub(arp_vel, "Y", "0.0"); sub(arp_vel, "Z", "0.0")
+        sub(arp_vel, "X", f"{pos_info['ARPVel_COA'][0]:.6f}")
+        sub(arp_vel, "Y", f"{pos_info['ARPVel_COA'][1]:.6f}")
+        sub(arp_vel, "Z", f"{pos_info['ARPVel_COA'][2]:.6f}")
             
         arp_acc = sub(scpcoa, "ARPAcc")
-        sub(arp_acc, "X", "0.0"); sub(arp_acc, "Y", "0.0"); sub(arp_acc, "Z", "0.0")
+        sub(arp_acc, "X", f"{pos_info['ARPAcc_COA'][0]:.6f}")
+        sub(arp_acc, "Y", f"{pos_info['ARPAcc_COA'][1]:.6f}")
+        sub(arp_acc, "Z", f"{pos_info['ARPAcc_COA'][2]:.6f}")
         
         sub(scpcoa, "SideOfTrack", cphd_meta.side_of_track)
         
         # Calculate dynamic geometry values
-        if cphd_meta.srp_ecf is not None and cphd_meta.arp_pos_coa is not None and cphd_meta.arp_vel_coa is not None:
-            geom = compute_scp_geometry(cphd_meta.srp_ecf, cphd_meta.arp_pos_coa, cphd_meta.arp_vel_coa, image_plane=self.image_plane)
+        if cphd_meta.srp_ecf is not None:
+            geom = compute_scp_geometry(
+                cphd_meta.srp_ecf,
+                pos_info['ARPPos_COA'],
+                pos_info['ARPVel_COA'],
+                side_of_track=cphd_meta.side_of_track,
+                image_plane=self.image_plane
+            )
             sub(scpcoa, "SlantRange", f"{geom['SlantRange']:.6f}")
             sub(scpcoa, "GroundRange", f"{geom['GroundRange']:.6f}")
             sub(scpcoa, "DopplerConeAng", f"{geom['DopplerConeAng']:.6f}")
             sub(scpcoa, "GrazeAng", f"{geom['GrazeAng']:.6f}")
             sub(scpcoa, "IncidenceAng", f"{geom['IncidenceAng']:.6f}")
-            sub(scpcoa, "TwistAng", "0.0")
+            sub(scpcoa, "TwistAng", f"{geom['TwistAng']:.6f}")
             sub(scpcoa, "SlopeAng", f"{geom['SlopeAng']:.6f}")
             sub(scpcoa, "AzimAng", f"{geom['AzimAng']:.6f}")
-            sub(scpcoa, "LayoverAng", "0.0")
+            sub(scpcoa, "LayoverAng", f"{geom['LayoverAng']:.6f}")
         else:
             sub(scpcoa, "SlantRange", "0.0")
             sub(scpcoa, "GroundRange", "0.0")
@@ -362,6 +373,42 @@ class IFAProcessor:
         ]:
             poly = sub(rad, poly_name, order1="0", order2="0")
             sub(poly, "Coef", f"{poly_val:.6e}", exponent1="0", exponent2="0")
+
+        # --- PFA Block ---
+        if ref_pvp is not None and num_samples is not None:
+            pfa_info = compute_pfa_metadata(
+                pvp=ref_pvp,
+                uIAX=u_col_vec,
+                uIAY=u_row_vec,
+                num_samples=num_samples,
+                domain_type=cphd_meta.domain_type,
+                side_of_track=cphd_meta.side_of_track
+            )
+            pfa = sub(root, "PFA")
+            fpn = sub(pfa, "FPN")
+            sub(fpn, "X", f"{pfa_info['FPN'][0]:.12f}")
+            sub(fpn, "Y", f"{pfa_info['FPN'][1]:.12f}")
+            sub(fpn, "Z", f"{pfa_info['FPN'][2]:.12f}")
+            
+            ipn = sub(pfa, "IPN")
+            sub(ipn, "X", f"{pfa_info['IPN'][0]:.12f}")
+            sub(ipn, "Y", f"{pfa_info['IPN'][1]:.12f}")
+            sub(ipn, "Z", f"{pfa_info['IPN'][2]:.12f}")
+            
+            sub(pfa, "PolarAngRefTime", f"{pfa_info['PolarAngRefTime']:.12f}")
+            
+            pap = sub(pfa, "PolarAngPoly", order1=str(len(pfa_info["PolarAngPoly"]) - 1))
+            for k, val in enumerate(pfa_info["PolarAngPoly"]):
+                sub(pap, "Coef", f"{val:.12e}", exponent1=str(k))
+                
+            sf_poly = sub(pfa, "SpatialFreqSFPoly", order1=str(len(pfa_info["SpatialFreqSFPoly"]) - 1))
+            for k, val in enumerate(pfa_info["SpatialFreqSFPoly"]):
+                sub(sf_poly, "Coef", f"{val:.12e}", exponent1=str(k))
+                
+            sub(pfa, "Krg1", f"{pfa_info['Krg1']:.12f}")
+            sub(pfa, "Krg2", f"{pfa_info['Krg2']:.12f}")
+            sub(pfa, "Kaz1", f"{pfa_info['Kaz1']:.12f}")
+            sub(pfa, "Kaz2", f"{pfa_info['Kaz2']:.12f}")
 
         xmltree = ET.ElementTree(root)
         clas_char = cphd_meta.classification[0].upper() if cphd_meta.classification else "U"
@@ -485,7 +532,7 @@ class IFAProcessor:
                 read_time += stop_copy - start_copy
 
                 print("Calling IFP_PerPolar...")
-                img_cpu, bw_range, bw_azm, N_range, N_azm = pfa_per_polar(
+                img_cpu, bw_range, bw_azm, N_range, N_azm, is_rotated = pfa_per_polar(
                     channel_signals=channel_signals,
                     channel_pvps=channel_pvps,
                     channel_fxcs=channel_fxcs,
@@ -515,7 +562,24 @@ class IFAProcessor:
                 dr_range = (r_max - r_min) / N_range
                 
                 print(f"Writing {out_name}...")
-                self._write_sicd(out_path, img_cpu, cphd_meta, tx_pol, rcv_pol, bw_range, bw_azm, N_range, N_azm, u_min, r_min, du_azm, dr_range)
+                self._write_sicd(
+                    out_path,
+                    img_cpu,
+                    cphd_meta,
+                    tx_pol,
+                    rcv_pol,
+                    bw_range,
+                    bw_azm,
+                    N_range,
+                    N_azm,
+                    u_min,
+                    r_min,
+                    du_azm,
+                    dr_range,
+                    ref_pvp=channel_pvps[0],
+                    num_samples=channel_signals[0].shape[1],
+                    is_rotated=is_rotated
+                )
                 output_files.append(out_path)
                 write_time += (time.perf_counter() - stop_proc)
 

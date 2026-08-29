@@ -57,7 +57,7 @@ def pfa_per_polar(
     image_plane: str = "Ground",
     czt_batch_size: int = 1024,
     device: str = "cuda"
-) -> Tuple[torch.Tensor, float, float, int, int]:
+) -> Tuple[np.ndarray, float, float, int, int, bool]:
     """
     takes in data on cpu, including numpy arrays
     allocates gpu shared kspace and image space
@@ -200,5 +200,5 @@ def pfa_per_polar(
         bw_range, bw_azm = bw_r, bw_u
         N_range, N_azm = N_r, N_u
 
-    return img_cpu, bw_range, bw_azm, N_range, N_azm
+    return img_cpu, bw_range, bw_azm, N_range, N_azm, is_rotated_dataset
 
