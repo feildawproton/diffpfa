@@ -22,7 +22,10 @@ def test_sicd_slant_schema_validation(tmp_path):
         reader = sksicd.NitfReader(f)
         xmltree = reader.metadata.xmltree
 
-    xsd_path = os.path.join(sksicd.schemas.__path__[0], 'SICD_schema_V1.3.0_2021_11_30.xsd')
+    schema_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "schemas"))
+    xsd_path = os.path.join(schema_dir, "SICD_schema_V1.3.0_2021_11_30.xsd")
+    if not os.path.exists(xsd_path):
+        xsd_path = os.path.join(sksicd.schemas.__path__[0], 'SICD_schema_V1.3.0_2021_11_30.xsd')
     schema = ET.XMLSchema(ET.parse(xsd_path))
     assert schema.validate(xmltree), f"Schema errors: {schema.error_log}"
 
@@ -42,6 +45,9 @@ def test_sicd_ground_schema_validation(tmp_path):
         reader = sksicd.NitfReader(f)
         xmltree = reader.metadata.xmltree
 
-    xsd_path = os.path.join(sksicd.schemas.__path__[0], 'SICD_schema_V1.3.0_2021_11_30.xsd')
+    schema_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "schemas"))
+    xsd_path = os.path.join(schema_dir, "SICD_schema_V1.3.0_2021_11_30.xsd")
+    if not os.path.exists(xsd_path):
+        xsd_path = os.path.join(sksicd.schemas.__path__[0], 'SICD_schema_V1.3.0_2021_11_30.xsd')
     schema = ET.XMLSchema(ET.parse(xsd_path))
     assert schema.validate(xmltree), f"Schema errors: {schema.error_log}"
