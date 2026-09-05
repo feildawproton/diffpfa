@@ -24,7 +24,7 @@ def run_stepped_chirp_simulation(
     samples_per_sub: int = 256,
     num_pulses: int = 512,
     prf_burst: float = 1000.0,
-    delta_tau: float = 150e-6,
+    delta_tau: float = 137.3217e-6,  # realistic non-integer cycle delay
     sat_vel: float = 7500.0,
     slant_range: float = 15000.0,
     squint_span_deg: float = 2.0,
@@ -302,6 +302,7 @@ def run_stepped_chirp_simulation(
 
     return {
         "complex_coherence": complex_corr,
+        "delta_tau": delta_tau,
         "img_ch1": img_ch1,
         "img_ch1_2": img_ch1_2,
         "img_multi": img_multi,
@@ -332,6 +333,7 @@ def plot_simulation_coherence(sim_results: dict, output_dir: str = "simulation")
     du = sim_results["du"]
     dr = sim_results["dr"]
     coherence = sim_results["complex_coherence"]
+    delta_tau = sim_results.get("delta_tau", 137.3217e-6)
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -343,7 +345,7 @@ def plot_simulation_coherence(sim_results: dict, output_dir: str = "simulation")
     # 1. Multi-Channel Stepped-Chirp 2D Magnitude (dB)
     mag_multi_db = 20.0 * np.log10(np.abs(img_multi) / np.max(np.abs(img_multi)) + 1e-6)
     im0 = axes[0, 0].imshow(mag_multi_db.T, cmap="inferno", extent=[-20, 20, -20, 20], origin="lower", vmin=-40, vmax=0)
-    axes[0, 0].set_title("Multi-Channel Stepped-Chirp (3x200MHz, delta_tau=150us)", fontsize=11, fontweight="bold")
+    axes[0, 0].set_title(f"Multi-Channel Stepped-Chirp (3x200MHz, delta_tau={delta_tau * 1e6:.1f}us)", fontsize=11, fontweight="bold")
     axes[0, 0].set_xlabel("Azimuth u (meters)")
     axes[0, 0].set_ylabel("Range r (meters)")
     fig.colorbar(im0, ax=axes[0, 0], label="Normalized Magnitude (dB)")

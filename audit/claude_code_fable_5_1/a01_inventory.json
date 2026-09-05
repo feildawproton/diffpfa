@@ -1,0 +1,4299 @@
+{
+ "cphd": [
+  {
+   "file": "2023-07-30-17-19-39_UMBRA-05_CPHD.cphd",
+   "size_GB": 1.055551104,
+   "CollectionID/CollectorName": "Umbra-05",
+   "CollectionID/RadarMode/ModeType": "SPOTLIGHT",
+   "Global/DomainType": "FX",
+   "Global/SGN": -1,
+   "Global/FxBand/FxMin": 9477820238.68058,
+   "Global/FxBand/FxMax": 9722181927.063503,
+   "Global/Timeline/CollectionStart": "2023-07-30T17:19:40+00:00",
+   "Channel/RefChId": "Primary",
+   "ReferenceGeometry/Monostatic/SideOfTrack": "L",
+   "ReferenceGeometry/Monostatic/ARPPos": [
+    3186107.7471286277,
+    5364131.611622597,
+    2945789.1615814194
+   ],
+   "ReferenceGeometry/Monostatic/ARPVel": [
+    -313.99049948748564,
+    -3560.3517971870033,
+    6798.438482737248
+   ],
+   "ReferenceGeometry/SRP/ECF": [
+    3158688.25,
+    4720208.0,
+    2892512.75
+   ],
+   "ReferenceGeometry/ReferenceTime": 1.4026233024755161,
+   "ReferenceGeometry/Monostatic/SlantRange": 646705.359850117,
+   "ReferenceGeometry/Monostatic/GrazeAngle": 52.64881002833845,
+   "ReferenceGeometry/Monostatic/TwistAngle": 38.94583952327548,
+   "ReferenceGeometry/Monostatic/SlopeAngle": 61.84527106707479,
+   "ReferenceGeometry/Monostatic/AzimuthAngle": 121.27827106817985,
+   "ReferenceGeometry/Monostatic/LayoverAngle": 75.80336416329739,
+   "ReferenceGeometry/Monostatic/DopplerConeAngle": 67.02277326429147,
+   "ReferenceGeometry/Monostatic/IncidenceAngle": 37.35118997166155,
+   "SceneCoordinates/IARP/ECF": [
+    3158688.25,
+    4720208.0,
+    2892512.75
+   ],
+   "SceneCoordinates/IARP/LLH": [
+    27.144885898368138,
+    56.210190272303024,
+    4.725182422436774
+   ],
+   "SceneCoordinates/ReferenceSurface/Planar/uIAX": [
+    0.5805809115990996,
+    -0.6720673637464643,
+    0.4596207826398313
+   ],
+   "SceneCoordinates/ReferenceSurface/Planar/uIAY": [
+    0.6465357514098287,
+    0.037423730827867985,
+    -0.7619652133435011
+   ],
+   "SceneCoordinates/ImageArea/X1Y1": [
+    -1999.999755859375,
+    -1999.999755859375
+   ],
+   "SceneCoordinates/ImageArea/X2Y2": [
+    1999.999755859375,
+    1999.999755859375
+   ],
+   "SceneCoordinates/ExtendedArea/X1Y1": null,
+   "SceneCoordinates/ExtendedArea/X2Y2": null,
+   "SceneCoordinates/ImageGrid/IAXExtent/LineSpacing": 0.4404649151472091,
+   "SceneCoordinates/ImageGrid/IAXExtent/FirstLine": 0,
+   "SceneCoordinates/ImageGrid/IAXExtent/NumLines": 9082,
+   "SceneCoordinates/ImageGrid/IAYExtent/SampleSpacing": 0.4404649151472091,
+   "SceneCoordinates/ImageGrid/IAYExtent/FirstSample": 0,
+   "SceneCoordinates/ImageGrid/IAYExtent/NumSamples": 9082,
+   "channels": [
+    {
+     "id": "Primary",
+     "NumVectors": 13152,
+     "NumSamples": 9999,
+     "FxC": "9600001082.872042",
+     "FxBW": "244361688.38292313",
+     "FXFixed": "true",
+     "TOAFixed": "false",
+     "SRPFixed": "true",
+     "SignalNormal": "false",
+     "TxPol": "X",
+     "RcvPol": "X",
+     "pvp_fields": [
+      "TxTime",
+      "TxPos",
+      "TxVel",
+      "RcvTime",
+      "RcvPos",
+      "RcvVel",
+      "SRPPos",
+      "aFDOP",
+      "aFRR1",
+      "aFRR2",
+      "FX1",
+      "FX2",
+      "TOA1",
+      "TOA2",
+      "TOAE1",
+      "TOAE2",
+      "TDTropoSRP",
+      "SC0",
+      "SCSS",
+      "SIGNAL"
+     ],
+     "TxTime": {
+      "min": 0.006200845333333333,
+      "max": 2.785424626666667,
+      "first": 0.006200845333333333,
+      "last": 2.785424626666667
+     },
+     "RcvTime": {
+      "min": 0.010543562736447768,
+      "max": 2.7897117529296356,
+      "first": 0.010543562736447768,
+      "last": 2.7897117529296356
+     },
+     "SC0": {
+      "min": 9475028500.516254,
+      "max": 9475028663.693918,
+      "first": 9475028663.693918,
+      "last": 9475028500.516254
+     },
+     "SCSS": {
+      "min": 24999.48373237106,
+      "max": 24999.516374432467,
+      "first": 24999.48373237106,
+      "last": 24999.516374432467
+     },
+     "FX1": {
+      "min": 9477820238.68058,
+      "max": 9477820238.68058,
+      "first": 9477820238.68058,
+      "last": 9477820238.68058
+     },
+     "FX2": {
+      "min": 9722181927.063503,
+      "max": 9722181927.063503,
+      "first": 9722181927.063503,
+      "last": 9722181927.063503
+     },
+     "TOA1": {
+      "min": -1.5756699232558373e-05,
+      "max": -1.547881254378744e-05,
+      "first": -1.574855744776861e-05,
+      "last": -1.5480083968974793e-05
+     },
+     "TOA2": {
+      "min": 8.995300767441637e-06,
+      "max": 9.273187456212571e-06,
+      "first": 9.003442552231401e-06,
+      "last": 9.271916031025217e-06
+     },
+     "aFDOP": {
+      "min": 1.9345396938375004e-05,
+      "max": 2.0651131617865914e-05,
+      "first": 2.0651131617865914e-05,
+      "last": 1.9345396938375004e-05
+     },
+     "SIGNAL": {
+      "min": 0.0,
+      "max": 1.0,
+      "first": 1.0,
+      "last": 1.0
+     },
+     "SIGNAL_n_not_1": 431,
+     "SIGNAL_bad_index_ranges": [
+      [
+       122,
+       122
+      ],
+      [
+       139,
+       139
+      ],
+      [
+       152,
+       152
+      ],
+      [
+       156,
+       156
+      ],
+      [
+       173,
+       173
+      ],
+      [
+       177,
+       177
+      ],
+      [
+       185,
+       185
+      ],
+      [
+       189,
+       189
+      ],
+      [
+       197,
+       197
+      ],
+      [
+       201,
+       201
+      ],
+      [
+       209,
+       209
+      ],
+      [
+       228,
+       228
+      ],
+      [
+       232,
+       232
+      ],
+      [
+       236,
+       236
+      ],
+      [
+       244,
+       244
+      ],
+      [
+       248,
+       248
+      ],
+      [
+       260,
+       260
+      ],
+      [
+       268,
+       268
+      ],
+      [
+       273,
+       273
+      ],
+      [
+       279,
+       279
+      ]
+     ],
+     "SRPPos_constant": true,
+     "max_|TxPos-RcvPos|_m": 29.545370700303465,
+     "max_|TxTime-RcvTime|_s": 0.004342717403114435,
+     "F_first_sample_mean": 9475028582.454725,
+     "F_last_sample_mean": 9724973583.289358,
+     "SCSS_rel_spread": 1.3057085713307565e-06
+    }
+   ]
+  },
+  {
+   "file": "2023-09-11-10-37-05_UMBRA-05_CPHD.cphd",
+   "size_GB": 0.14042072,
+   "CollectionID/CollectorName": "Umbra-05",
+   "CollectionID/RadarMode/ModeType": "SPOTLIGHT",
+   "Global/DomainType": "FX",
+   "Global/SGN": -1,
+   "Global/FxBand/FxMin": 9553174284.053967,
+   "Global/FxBand/FxMax": 9646824241.150171,
+   "Global/Timeline/CollectionStart": "2023-09-11T10:37:06+00:00",
+   "Channel/RefChId": "Primary",
+   "ReferenceGeometry/Monostatic/SideOfTrack": "R",
+   "ReferenceGeometry/Monostatic/ARPPos": [
+    -6166621.245422188,
+    1464000.4822186567,
+    -2740434.887622591
+   ],
+   "ReferenceGeometry/Monostatic/ARPVel": [
+    -2545.41039667724,
+    2185.0326095698038,
+    6903.084034237627
+   ],
+   "ReferenceGeometry/SRP/ECF": [
+    -5912394.53125,
+    1100674.4384765625,
+    -2117715.576171875
+   ],
+   "ReferenceGeometry/ReferenceTime": 0.5039321233859292,
+   "ReferenceGeometry/Monostatic/SlantRange": 764471.305618284,
+   "ReferenceGeometry/Monostatic/GrazeAngle": 41.47578399179516,
+   "ReferenceGeometry/Monostatic/TwistAngle": -35.3364960038337,
+   "ReferenceGeometry/Monostatic/SlopeAngle": 52.32342352766184,
+   "ReferenceGeometry/Monostatic/AzimuthAngle": 212.8460667199399,
+   "ReferenceGeometry/Monostatic/LayoverAngle": 259.79623482232694,
+   "ReferenceGeometry/Monostatic/DopplerConeAngle": 60.85306303574566,
+   "ReferenceGeometry/Monostatic/IncidenceAngle": 48.52421600820484,
+   "SceneCoordinates/IARP/ECF": [
+    -5912394.53125,
+    1100674.4384765625,
+    -2117715.576171875
+   ],
+   "SceneCoordinates/IARP/LLH": [
+    -19.51969976980354,
+    169.4543154329807,
+    172.84671130031347
+   ],
+   "SceneCoordinates/ReferenceSurface/Planar/uIAX": [
+    -0.3753312760964036,
+    -0.47849503345787525,
+    0.7938318061642349
+   ],
+   "SceneCoordinates/ReferenceSurface/Planar/uIAY": [
+    -0.02294343337416649,
+    0.8609796785749495,
+    0.5081216311082244
+   ],
+   "SceneCoordinates/ImageArea/X1Y1": [
+    -2000.0,
+    -2000.0
+   ],
+   "SceneCoordinates/ImageArea/X2Y2": [
+    2000.0,
+    2000.0
+   ],
+   "SceneCoordinates/ExtendedArea/X1Y1": [
+    -3304.3849533646403,
+    -3844.166596413342
+   ],
+   "SceneCoordinates/ExtendedArea/X2Y2": [
+    3304.3849533646403,
+    3844.166596413342
+   ],
+   "SceneCoordinates/ImageGrid/IAXExtent/LineSpacing": 1.4241916171350884,
+   "SceneCoordinates/ImageGrid/IAXExtent/FirstLine": 0,
+   "SceneCoordinates/ImageGrid/IAXExtent/NumLines": 2810,
+   "SceneCoordinates/ImageGrid/IAYExtent/SampleSpacing": 1.4241916171350884,
+   "SceneCoordinates/ImageGrid/IAYExtent/FirstSample": 0,
+   "SceneCoordinates/ImageGrid/IAYExtent/NumSamples": 2810,
+   "channels": [
+    {
+     "id": "Primary",
+     "NumVectors": 4346,
+     "NumSamples": 3999,
+     "FxC": "9599999262.60207",
+     "FxBW": "93649957.09620476",
+     "FXFixed": "false",
+     "TOAFixed": "false",
+     "SRPFixed": "true",
+     "SignalNormal": "false",
+     "TxPol": "X",
+     "RcvPol": "X",
+     "pvp_fields": [
+      "TxTime",
+      "TxPos",
+      "TxVel",
+      "RcvTime",
+      "RcvPos",
+      "RcvVel",
+      "SRPPos",
+      "aFDOP",
+      "aFRR1",
+      "aFRR2",
+      "FX1",
+      "FX2",
+      "TOA1",
+      "TOA2",
+      "TOAE1",
+      "TOAE2",
+      "TDTropoSRP",
+      "SC0",
+      "SCSS",
+      "SIGNAL"
+     ],
+     "TxTime": {
+      "min": 0.006293336,
+      "max": 0.9950275599999999,
+      "first": 0.006293336,
+      "last": 0.9950275599999999
+     },
+     "RcvTime": {
+      "min": 0.01140575409379787,
+      "max": 1.0001153210464848,
+      "first": 0.01140575409379787,
+      "last": 1.0001153210464848
+     },
+     "SC0": {
+      "min": 9552616732.606081,
+      "max": 9552616749.114988,
+      "first": 9552616749.114988,
+      "last": 9552616732.606081
+     },
+     "SCSS": {
+      "min": 23703.10847239994,
+      "max": 23703.116730982027,
+      "first": 23703.10847239994,
+      "last": 23703.116730982027
+     },
+     "FX1": {
+      "min": 9553174284.053967,
+      "max": 9553174284.752459,
+      "first": 9553174284.752459,
+      "last": 9553174284.752459
+     },
+     "FX2": {
+      "min": 9646824240.45168,
+      "max": 9646824241.150171,
+      "first": 9646824241.150171,
+      "last": 9646824241.150171
+     },
+     "TOA1": {
+      "min": -1.651135049746855e-05,
+      "max": -1.645829609481964e-05,
+      "first": -1.6500858131202796e-05,
+      "last": -1.646781081816218e-05
+     },
+     "TOA2": {
+      "min": 1.1675316169198108e-05,
+      "max": 1.1728370571847019e-05,
+      "first": 1.1685808535463862e-05,
+      "last": 1.1718855848504478e-05
+     },
+     "aFDOP": {
+      "min": 2.4763524912652102e-05,
+      "max": 2.5111951221568063e-05,
+      "first": 2.5111951221568063e-05,
+      "last": 2.4763524912652102e-05
+     },
+     "SIGNAL": {
+      "min": 0.0,
+      "max": 1.0,
+      "first": 1.0,
+      "last": 1.0
+     },
+     "SIGNAL_n_not_1": 1,
+     "SIGNAL_bad_index_ranges": [
+      [
+       3832,
+       3832
+      ]
+     ],
+     "SRPPos_constant": true,
+     "max_|TxPos-RcvPos|_m": 35.28302324516699,
+     "max_|TxTime-RcvTime|_s": 0.005112418093797869,
+     "F_first_sample_mean": 9552616740.873682,
+     "F_last_sample_mean": 9647381785.028625,
+     "SCSS_rel_spread": 3.4841762036248964e-07
+    }
+   ]
+  },
+  {
+   "file": "2023-09-13-21-18-21_UMBRA-06_CPHD.cphd",
+   "size_GB": 0.13944212,
+   "CollectionID/CollectorName": "Umbra-06",
+   "CollectionID/RadarMode/ModeType": "SPOTLIGHT",
+   "Global/DomainType": "FX",
+   "Global/SGN": -1,
+   "Global/FxBand/FxMin": 9546580273.658037,
+   "Global/FxBand/FxMax": 9653416727.08746,
+   "Global/Timeline/CollectionStart": "2023-09-13T21:18:22+00:00",
+   "Channel/RefChId": "Primary",
+   "ReferenceGeometry/Monostatic/SideOfTrack": "R",
+   "ReferenceGeometry/Monostatic/ARPPos": [
+    6622849.862310227,
+    1849664.1138342205,
+    -633550.2963800622
+   ],
+   "ReferenceGeometry/Monostatic/ARPVel": [
+    -258.75126870477675,
+    -1611.0677104737015,
+    -7503.840208757934
+   ],
+   "ReferenceGeometry/SRP/ECF": [
+    6181842.7734375,
+    1326637.6953125,
+    -837207.5805664062
+   ],
+   "ReferenceGeometry/ReferenceTime": 0.5043289094793127,
+   "ReferenceGeometry/Monostatic/SlantRange": 713806.8200219244,
+   "ReferenceGeometry/Monostatic/GrazeAngle": 45.51792110347804,
+   "ReferenceGeometry/Monostatic/TwistAngle": -37.04715134086423,
+   "ReferenceGeometry/Monostatic/SlopeAngle": 55.99635669313099,
+   "ReferenceGeometry/Monostatic/AzimuthAngle": 56.87067577963742,
+   "ReferenceGeometry/Monostatic/LayoverAngle": 103.48477917362328,
+   "ReferenceGeometry/Monostatic/DopplerConeAngle": 63.04198165023754,
+   "ReferenceGeometry/Monostatic/IncidenceAngle": 44.48207889652196,
+   "SceneCoordinates/IARP/ECF": [
+    6181842.7734375,
+    1326637.6953125,
+    -837207.5805664062
+   ],
+   "SceneCoordinates/IARP/LLH": [
+    -7.593199990593676,
+    12.112098788066136,
+    12.26123808324337
+   ],
+   "SceneCoordinates/ReferenceSurface/Planar/uIAX": [
+    0.10382646135985851,
+    -0.8310068608261645,
+    -0.5464866540860385
+   ],
+   "SceneCoordinates/ReferenceSurface/Planar/uIAY": [
+    -0.2234693132340908,
+    0.5159164459910244,
+    -0.8269774402724579
+   ],
+   "SceneCoordinates/ImageArea/X1Y1": [
+    -2000.0,
+    -2000.0
+   ],
+   "SceneCoordinates/ImageArea/X2Y2": [
+    2000.0,
+    2000.0
+   ],
+   "SceneCoordinates/ExtendedArea/X1Y1": [
+    -3064.367707404706,
+    -3678.199627716989
+   ],
+   "SceneCoordinates/ExtendedArea/X2Y2": [
+    3064.367707404706,
+    3678.199627716989
+   ],
+   "SceneCoordinates/ImageGrid/IAXExtent/LineSpacing": 1.3349050722501035,
+   "SceneCoordinates/ImageGrid/IAXExtent/FirstLine": 0,
+   "SceneCoordinates/ImageGrid/IAXExtent/NumLines": 2998,
+   "SceneCoordinates/ImageGrid/IAYExtent/SampleSpacing": 1.3349050722501035,
+   "SceneCoordinates/ImageGrid/IAYExtent/FirstSample": 0,
+   "SceneCoordinates/ImageGrid/IAYExtent/NumSamples": 2998,
+   "channels": [
+    {
+     "id": "Primary",
+     "NumVectors": 4439,
+     "NumSamples": 3887,
+     "FxC": "9599998500.37275",
+     "FxBW": "106836453.42942238",
+     "FXFixed": "false",
+     "TOAFixed": "false",
+     "SRPFixed": "true",
+     "SignalNormal": "false",
+     "TxPol": "X",
+     "RcvPol": "X",
+     "pvp_fields": [
+      "TxTime",
+      "TxPos",
+      "TxVel",
+      "RcvTime",
+      "RcvPos",
+      "RcvVel",
+      "SRPPos",
+      "aFDOP",
+      "aFRR1",
+      "aFRR2",
+      "FX1",
+      "FX2",
+      "TOA1",
+      "TOA2",
+      "TOAE1",
+      "TOAE2",
+      "TDTropoSRP",
+      "SC0",
+      "SCSS",
+      "SIGNAL"
+     ],
+     "TxTime": {
+      "min": 0.007495792,
+      "max": 0.9951876693333334,
+      "first": 0.007495792,
+      "last": 0.9951876693333334
+     },
+     "RcvTime": {
+      "min": 0.012269353807327486,
+      "max": 0.9999382925917844,
+      "first": 0.012269353807327486,
+      "last": 0.9999382925917844
+     },
+     "SC0": {
+      "min": 9546027521.230606,
+      "max": 9546027542.269825,
+      "first": 9546027542.269825,
+      "last": 9546027521.230606
+     },
+     "SCSS": {
+      "min": 27777.12726584997,
+      "max": 27777.138094063135,
+      "first": 27777.12726584997,
+      "last": 27777.138094063135
+     },
+     "FX1": {
+      "min": 9546580273.658037,
+      "max": 9546580274.007282,
+      "first": 9546580274.007282,
+      "last": 9546580274.007282
+     },
+     "FX2": {
+      "min": 9653416726.738214,
+      "max": 9653416727.08746,
+      "first": 9653416727.08746,
+      "last": 9653416727.08746
+     },
+     "TOA1": {
+      "min": -1.2629265339860602e-05,
+      "max": -1.2601675893855041e-05,
+      "first": -1.260990499415206e-05,
+      "last": -1.2620689451083706e-05
+     },
+     "TOA2": {
+      "min": 1.4288067993472732e-05,
+      "max": 1.4315657439478293e-05,
+      "first": 1.4307428339181274e-05,
+      "last": 1.4296643882249628e-05
+     },
+     "aFDOP": {
+      "min": 2.3029144056385675e-05,
+      "max": 2.3418977836753285e-05,
+      "first": 2.3418977836753285e-05,
+      "last": 2.3029144056385675e-05
+     },
+     "SIGNAL": {
+      "min": 0.0,
+      "max": 1.0,
+      "first": 1.0,
+      "last": 1.0
+     },
+     "SIGNAL_n_not_1": 200,
+     "SIGNAL_bad_index_ranges": [
+      [
+       2,
+       2
+      ],
+      [
+       11,
+       11
+      ],
+      [
+       20,
+       20
+      ],
+      [
+       29,
+       29
+      ],
+      [
+       47,
+       47
+      ],
+      [
+       65,
+       65
+      ],
+      [
+       83,
+       83
+      ],
+      [
+       92,
+       92
+      ],
+      [
+       138,
+       138
+      ],
+      [
+       147,
+       147
+      ],
+      [
+       173,
+       173
+      ],
+      [
+       182,
+       182
+      ],
+      [
+       191,
+       191
+      ],
+      [
+       200,
+       200
+      ],
+      [
+       218,
+       218
+      ],
+      [
+       264,
+       264
+      ],
+      [
+       273,
+       273
+      ],
+      [
+       282,
+       282
+      ],
+      [
+       289,
+       289
+      ],
+      [
+       291,
+       291
+      ]
+     ],
+     "SRPPos_constant": true,
+     "max_|TxPos-RcvPos|_m": 35.82185726962052,
+     "max_|TxTime-RcvTime|_s": 0.004773561807327486,
+     "F_first_sample_mean": 9546027531.766836,
+     "F_last_sample_mean": 9653969469.327433,
+     "SCSS_rel_spread": 3.8982472719893244e-07
+    }
+   ]
+  },
+  {
+   "file": "2023-10-04-02-03-26_UMBRA-04_CPHD.cphd",
+   "size_GB": 0.184049176,
+   "CollectionID/CollectorName": "Umbra-04",
+   "CollectionID/RadarMode/ModeType": "SPOTLIGHT",
+   "Global/DomainType": "FX",
+   "Global/SGN": -1,
+   "Global/FxBand/FxMin": 9519545506.68597,
+   "Global/FxBand/FxMax": 9680478366.091846,
+   "Global/Timeline/CollectionStart": "2023-10-04T02:03:27+00:00",
+   "Channel/RefChId": "Primary",
+   "ReferenceGeometry/Monostatic/SideOfTrack": "R",
+   "ReferenceGeometry/Monostatic/ARPPos": [
+    2537261.6626196294,
+    -6413807.787864096,
+    168830.72478137971
+   ],
+   "ReferenceGeometry/Monostatic/ARPVel": [
+    -1457.715848880513,
+    -366.4877992725733,
+    7534.098971385793
+   ],
+   "ReferenceGeometry/SRP/ECF": [
+    2507068.115234375,
+    -5850408.203125,
+    410226.1047363281
+   ],
+   "ReferenceGeometry/ReferenceTime": 0.5029987360969288,
+   "ReferenceGeometry/Monostatic/SlantRange": 613679.4536657433,
+   "ReferenceGeometry/Monostatic/GrazeAngle": 56.714835689699484,
+   "ReferenceGeometry/Monostatic/TwistAngle": -39.42825060897301,
+   "ReferenceGeometry/Monostatic/SlopeAngle": 64.91835426410697,
+   "ReferenceGeometry/Monostatic/AzimuthAngle": 215.20526480408253,
+   "ReferenceGeometry/Monostatic/LayoverAngle": 259.7314061809551,
+   "ReferenceGeometry/Monostatic/DopplerConeAngle": 69.43341498885799,
+   "ReferenceGeometry/Monostatic/IncidenceAngle": 33.285164310300516,
+   "SceneCoordinates/IARP/ECF": [
+    2507068.115234375,
+    -5850408.203125,
+    410226.1047363281
+   ],
+   "SceneCoordinates/IARP/LLH": [
+    3.712437949139338,
+    -66.80347536893738,
+    114.0356287797913
+   ],
+   "SceneCoordinates/ReferenceSurface/Planar/uIAX": [
+    0.5026912745088339,
+    0.27331164572387934,
+    0.8201232997816987
+   ],
+   "SceneCoordinates/ReferenceSurface/Planar/uIAY": [
+    -0.7699387050233781,
+    -0.2898086318746209,
+    0.5685115191736259
+   ],
+   "SceneCoordinates/ImageArea/X1Y1": [
+    -2000.0,
+    -2000.0
+   ],
+   "SceneCoordinates/ImageArea/X2Y2": [
+    2000.0,
+    2000.0
+   ],
+   "SceneCoordinates/ExtendedArea/X1Y1": [
+    -3207.48501863127,
+    -2890.3849583898154
+   ],
+   "SceneCoordinates/ExtendedArea/X2Y2": [
+    3207.48501863127,
+    2890.3849583898154
+   ],
+   "SceneCoordinates/ImageGrid/IAXExtent/LineSpacing": 1.131424239476812,
+   "SceneCoordinates/ImageGrid/IAXExtent/FirstLine": 0,
+   "SceneCoordinates/ImageGrid/IAXExtent/NumLines": 3537,
+   "SceneCoordinates/ImageGrid/IAYExtent/SampleSpacing": 1.131424239476812,
+   "SceneCoordinates/ImageGrid/IAYExtent/FirstSample": 0,
+   "SceneCoordinates/ImageGrid/IAYExtent/NumSamples": 3537,
+   "channels": [
+    {
+     "id": "Primary",
+     "NumVectors": 4697,
+     "NumSamples": 4859,
+     "FxC": "9600011936.388908",
+     "FxBW": "160932859.40587616",
+     "FXFixed": "true",
+     "TOAFixed": "false",
+     "SRPFixed": "true",
+     "SignalNormal": "true",
+     "TxPol": "X",
+     "RcvPol": "X",
+     "pvp_fields": [
+      "TxTime",
+      "TxPos",
+      "TxVel",
+      "RcvTime",
+      "RcvPos",
+      "RcvVel",
+      "SRPPos",
+      "aFDOP",
+      "aFRR1",
+      "aFRR2",
+      "FX1",
+      "FX2",
+      "TOA1",
+      "TOA2",
+      "TOAE1",
+      "TOAE2",
+      "TDTropoSRP",
+      "SC0",
+      "SCSS",
+      "SIGNAL"
+     ],
+     "TxTime": {
+      "min": 0.004785778666666667,
+      "max": 0.996014888,
+      "first": 0.004785778666666667,
+      "last": 0.996014888
+     },
+     "RcvTime": {
+      "min": 0.00888882370191831,
+      "max": 1.0001000861970346,
+      "first": 0.00888882370191831,
+      "last": 1.0001000861970346
+     },
+     "SC0": {
+      "min": 9517742740.090374,
+      "max": 9517742781.932686,
+      "first": 9517742781.932686,
+      "last": 9517742740.090374
+     },
+     "SCSS": {
+      "min": 33869.55720717291,
+      "max": 33869.57443331985,
+      "first": 33869.55720717291,
+      "last": 33869.57443331985
+     },
+     "FX1": {
+      "min": 9519545506.68597,
+      "max": 9519545506.68597,
+      "first": 9519545506.68597,
+      "last": 9519545506.68597
+     },
+     "FX2": {
+      "min": 9680478366.091846,
+      "max": 9680478366.091846,
+      "first": 9680478366.091846,
+      "last": 9680478366.091846
+     },
+     "TOA1": {
+      "min": -1.1165237315282916e-05,
+      "max": -1.1143087493417369e-05,
+      "first": -1.1149132918310694e-05,
+      "last": -1.1147628034471623e-05
+     },
+     "TOA2": {
+      "min": 1.1714762684717082e-05,
+      "max": 1.1736912506582629e-05,
+      "first": 1.1730867081689304e-05,
+      "last": 1.1732371965528374e-05
+     },
+     "aFDOP": {
+      "min": 1.7749958503676666e-05,
+      "max": 1.8258570192886125e-05,
+      "first": 1.8258570192886125e-05,
+      "last": 1.7749958503676666e-05
+     },
+     "SIGNAL": {
+      "min": 1.0,
+      "max": 1.0,
+      "first": 1.0,
+      "last": 1.0
+     },
+     "SIGNAL_n_not_1": 0,
+     "SIGNAL_bad_index_ranges": [],
+     "SRPPos_constant": true,
+     "max_|TxPos-RcvPos|_m": 30.913161610951647,
+     "max_|TxTime-RcvTime|_s": 0.004103045035251643,
+     "F_first_sample_mean": 9517742761.04176,
+     "F_last_sample_mean": 9682281111.73606,
+     "SCSS_rel_spread": 5.086025324118848e-07
+    }
+   ]
+  },
+  {
+   "file": "2023-11-14-03-38-20_UMBRA-04_CPHD.cphd",
+   "size_GB": 0.601691016,
+   "CollectionID/CollectorName": "Umbra-04",
+   "CollectionID/RadarMode/ModeType": "SPOTLIGHT",
+   "Global/DomainType": "FX",
+   "Global/SGN": -1,
+   "Global/FxBand/FxMin": 9455662538.64672,
+   "Global/FxBand/FxMax": 9744347622.036003,
+   "Global/Timeline/CollectionStart": "2023-11-14T03:38:21+00:00",
+   "Channel/RefChId": "Primary",
+   "ReferenceGeometry/Monostatic/SideOfTrack": "R",
+   "ReferenceGeometry/Monostatic/ARPPos": [
+    -793133.1712422404,
+    -4850740.382136037,
+    4812250.078629524
+   ],
+   "ReferenceGeometry/Monostatic/ARPVel": [
+    -872.6338349423409,
+    5456.150050857232,
+    5344.1029429831915
+   ],
+   "ReferenceGeometry/SRP/ECF": [
+    -546747.4365234375,
+    -4322648.4375,
+    4642683.59375
+   ],
+   "ReferenceGeometry/ReferenceTime": 0.9644990499588114,
+   "ReferenceGeometry/Monostatic/SlantRange": 606910.0634004954,
+   "ReferenceGeometry/Monostatic/GrazeAngle": 55.866872033936616,
+   "ReferenceGeometry/Monostatic/TwistAngle": -42.395252250805605,
+   "ReferenceGeometry/Monostatic/SlopeAngle": 65.51898536204065,
+   "ReferenceGeometry/Monostatic/AzimuthAngle": 211.5463782411494,
+   "ReferenceGeometry/Monostatic/LayoverAngle": 259.34974712581953,
+   "ReferenceGeometry/Monostatic/DopplerConeAngle": 67.83437187633875,
+   "ReferenceGeometry/Monostatic/IncidenceAngle": 34.133127966063384,
+   "SceneCoordinates/IARP/ECF": [
+    -546747.4365234375,
+    -4322648.4375,
+    4642683.59375
+   ],
+   "SceneCoordinates/IARP/LLH": [
+    47.009576595185656,
+    -97.20874033391662,
+    263.56314760725945
+   ],
+   "SceneCoordinates/ReferenceSurface/Planar/uIAX": [
+    -0.8057612346019596,
+    0.47880551032721996,
+    0.34856006130576134
+   ],
+   "SceneCoordinates/ReferenceSurface/Planar/uIAY": [
+    -0.5860268559772521,
+    -0.5595638155937195,
+    -0.5860553393140435
+   ],
+   "SceneCoordinates/ImageArea/X1Y1": [
+    -2000.0,
+    -2000.0
+   ],
+   "SceneCoordinates/ImageArea/X2Y2": [
+    2000.0,
+    2000.0
+   ],
+   "SceneCoordinates/ExtendedArea/X1Y1": null,
+   "SceneCoordinates/ExtendedArea/X2Y2": null,
+   "SceneCoordinates/ImageGrid/IAXExtent/LineSpacing": 0.6168944533940514,
+   "SceneCoordinates/ImageGrid/IAXExtent/FirstLine": 0,
+   "SceneCoordinates/ImageGrid/IAXExtent/NumLines": 6485,
+   "SceneCoordinates/ImageGrid/IAYExtent/SampleSpacing": 0.6168944533940514,
+   "SceneCoordinates/ImageGrid/IAYExtent/FirstSample": 0,
+   "SceneCoordinates/ImageGrid/IAYExtent/NumSamples": 6485,
+   "channels": [
+    {
+     "id": "Primary",
+     "NumVectors": 8671,
+     "NumSamples": 8639,
+     "FxC": "9600005080.341362",
+     "FxBW": "288685083.3892822",
+     "FXFixed": "true",
+     "TOAFixed": "false",
+     "SRPFixed": "true",
+     "SignalNormal": "true",
+     "TxPol": "X",
+     "RcvPol": "X",
+     "pvp_fields": [
+      "TxTime",
+      "TxPos",
+      "TxVel",
+      "RcvTime",
+      "RcvPos",
+      "RcvVel",
+      "SRPPos",
+      "aFDOP",
+      "aFRR1",
+      "aFRR2",
+      "FX1",
+      "FX2",
+      "TOA1",
+      "TOA2",
+      "TOAE1",
+      "TOAE2",
+      "TDTropoSRP",
+      "SC0",
+      "SCSS",
+      "SIGNAL"
+     ],
+     "TxTime": {
+      "min": 0.00598336,
+      "max": 1.91449464,
+      "first": 0.00598336,
+      "last": 1.91449464
+     },
+     "RcvTime": {
+      "min": 0.010050984146065034,
+      "max": 1.9185253382147862,
+      "first": 0.010050984146065034,
+      "last": 1.9185253382147862
+     },
+     "SC0": {
+      "min": 9454241579.846443,
+      "max": 9454241720.687044,
+      "first": 9454241720.687044,
+      "last": 9454241579.846443
+     },
+     "SCSS": {
+      "min": 33749.330783588295,
+      "max": 33749.363393127656,
+      "first": 33749.330783588295,
+      "last": 33749.363393127656
+     },
+     "FX1": {
+      "min": 9455662538.64672,
+      "max": 9455662538.64672,
+      "first": 9455662538.64672,
+      "last": 9455662538.64672
+     },
+     "FX2": {
+      "min": 9744347622.036003,
+      "max": 9744347622.036003,
+      "first": 9744347622.036003,
+      "last": 9744347622.036003
+     },
+     "TOA1": {
+      "min": -1.1731239312439358e-05,
+      "max": -1.1509581550943145e-05,
+      "first": -1.1519300398367906e-05,
+      "last": -1.1729369119549917e-05
+     },
+     "TOA2": {
+      "min": 1.1575427354227306e-05,
+      "max": 1.179708511572352e-05,
+      "first": 1.1787366268298759e-05,
+      "last": 1.1577297547116748e-05
+     },
+     "aFDOP": {
+      "min": 1.8862781645090365e-05,
+      "max": 1.9829027603446292e-05,
+      "first": 1.9829027603446292e-05,
+      "last": 1.8862781645090365e-05
+     },
+     "SIGNAL": {
+      "min": 1.0,
+      "max": 1.0,
+      "first": 1.0,
+      "last": 1.0
+     },
+     "SIGNAL_n_not_1": 0,
+     "SIGNAL_bad_index_ranges": [],
+     "SRPPos_constant": true,
+     "max_|TxPos-RcvPos|_m": 22.17009436059743,
+     "max_|TxTime-RcvTime|_s": 0.004067624146065034,
+     "F_first_sample_mean": 9454241650.478636,
+     "F_last_sample_mean": 9745768510.204088,
+     "SCSS_rel_spread": 9.662272672468733e-07
+    }
+   ]
+  },
+  {
+   "file": "2025-10-26-05-00-15_UMBRA-08_CPHD.cphd",
+   "size_GB": 2.061012112,
+   "CollectionID/CollectorName": "Umbra-08",
+   "CollectionID/RadarMode/ModeType": "SPOTLIGHT",
+   "Global/DomainType": "FX",
+   "Global/SGN": -1,
+   "Global/FxBand/FxMin": 9487378595.396875,
+   "Global/FxBand/FxMax": 9712619489.058851,
+   "Global/Timeline/CollectionStart": "2025-10-26T05:00:15+00:00",
+   "Channel/RefChId": "Primary",
+   "ReferenceGeometry/Monostatic/SideOfTrack": "R",
+   "ReferenceGeometry/Monostatic/ARPPos": [
+    -932270.8604430493,
+    -4676622.4547792245,
+    4820921.887237068
+   ],
+   "ReferenceGeometry/Monostatic/ARPVel": [
+    -667.5858059537227,
+    5603.355706124348,
+    5293.920264991264
+   ],
+   "ReferenceGeometry/SRP/ECF": [
+    -519084.3505859375,
+    -4334657.2265625,
+    4634686.5234375
+   ],
+   "ReferenceGeometry/ReferenceTime": 0.6991099895766734,
+   "ReferenceGeometry/Monostatic/SlantRange": 567756.0391284053,
+   "ReferenceGeometry/Monostatic/GrazeAngle": 45.010394808416144,
+   "ReferenceGeometry/Monostatic/TwistAngle": -9.942309972004852,
+   "ReferenceGeometry/Monostatic/SlopeAngle": 45.864217307375434,
+   "ReferenceGeometry/Monostatic/AzimuthAngle": 247.04100290366392,
+   "ReferenceGeometry/Monostatic/LayoverAngle": 260.96130693013595,
+   "ReferenceGeometry/Monostatic/DopplerConeAngle": 81.43310940721184,
+   "ReferenceGeometry/Monostatic/IncidenceAngle": 44.989605191583856,
+   "SceneCoordinates/IARP/ECF": [
+    -519084.3505859375,
+    -4334657.2265625,
+    4634686.5234375
+   ],
+   "SceneCoordinates/IARP/LLH": [
+    46.90434806820335,
+    -96.82877159269106,
+    246.95744863277233
+   ],
+   "SceneCoordinates/ReferenceSurface/Planar/uIAX": [
+    0.9481198965455901,
+    0.17333201959463954,
+    0.26650454547272373
+   ],
+   "SceneCoordinates/ReferenceSurface/Planar/uIAY": [
+    -0.30735859333632704,
+    0.7139804191585488,
+    0.6290966985770132
+   ],
+   "SceneCoordinates/ImageArea/X1Y1": [
+    -2500.0,
+    -2500.0
+   ],
+   "SceneCoordinates/ImageArea/X2Y2": [
+    2500.0,
+    2500.0
+   ],
+   "SceneCoordinates/ExtendedArea/X1Y1": null,
+   "SceneCoordinates/ExtendedArea/X2Y2": null,
+   "SceneCoordinates/ImageGrid/IAXExtent/LineSpacing": 0.7820295744440682,
+   "SceneCoordinates/ImageGrid/IAXExtent/FirstLine": 0,
+   "SceneCoordinates/ImageGrid/IAXExtent/NumLines": 6400,
+   "SceneCoordinates/ImageGrid/IAYExtent/SampleSpacing": 0.7820295744440682,
+   "SceneCoordinates/ImageGrid/IAYExtent/FirstSample": 0,
+   "SceneCoordinates/ImageGrid/IAYExtent/NumSamples": 6400,
+   "channels": [
+    {
+     "id": "Primary",
+     "NumVectors": 8229,
+     "NumSamples": 31250,
+     "FxC": "9.59999904222786331E+09",
+     "FxBW": "2.25240893661975861E+08",
+     "FXFixed": "true",
+     "TOAFixed": "false",
+     "SRPFixed": "true",
+     "SignalNormal": "true",
+     "TxPol": "V",
+     "RcvPol": "V",
+     "pvp_fields": [
+      "TxTime",
+      "TxPos",
+      "TxVel",
+      "RcvTime",
+      "RcvPos",
+      "RcvVel",
+      "SRPPos",
+      "aFDOP",
+      "aFRR1",
+      "aFRR2",
+      "FX1",
+      "FX2",
+      "TOA1",
+      "TOA2",
+      "TOAE1",
+      "TOAE2",
+      "TDTropoSRP",
+      "SC0",
+      "SCSS",
+      "SIGNAL",
+      "TxACX",
+      "TxACY",
+      "TxEB",
+      "RcvACX",
+      "RcvACY",
+      "RcvEB",
+      "PulseNumber"
+     ],
+     "TxTime": {
+      "min": 0.004194109333333334,
+      "max": 1.226899144,
+      "first": 0.004194109333333334,
+      "last": 1.226899144
+     },
+     "RcvTime": {
+      "min": 0.007987263252285525,
+      "max": 1.2306828324561763,
+      "first": 0.007987263252285525,
+      "last": 1.2306828324561763
+     },
+     "SC0": {
+      "min": 9487264554.493376,
+      "max": 9487264554.493376,
+      "first": 9487264554.493376,
+      "last": 9487264554.493376
+     },
+     "SCSS": {
+      "min": 7215.007215007215,
+      "max": 7215.007215007215,
+      "first": 7215.007215007215,
+      "last": 7215.007215007215
+     },
+     "FX1": {
+      "min": 9487378595.396875,
+      "max": 9487378595.396875,
+      "first": 9487378595.396875,
+      "last": 9487378595.396875
+     },
+     "FX2": {
+      "min": 9712619489.058851,
+      "max": 9712619489.058851,
+      "first": 9712619489.058851,
+      "last": 9712619489.058851
+     },
+     "TOA1": {
+      "min": -1.3365360232122145e-05,
+      "max": -1.3301727281956108e-05,
+      "first": -1.3311407160856282e-05,
+      "last": -1.336061105151781e-05
+     },
+     "TOA2": {
+      "min": 1.3829306434544954e-05,
+      "max": 1.3892939384710991e-05,
+      "first": 1.3883259505810818e-05,
+      "last": 1.383405561514929e-05
+     },
+     "aFDOP": {
+      "min": 7.349630810561516e-06,
+      "max": 8.132223141392024e-06,
+      "first": 8.132223141392024e-06,
+      "last": 7.349630810561516e-06
+     },
+     "SIGNAL": {
+      "min": 1.0,
+      "max": 1.0,
+      "first": 1.0,
+      "last": 1.0
+     },
+     "SIGNAL_n_not_1": 0,
+     "SIGNAL_bad_index_ranges": [],
+     "SRPPos_constant": true,
+     "max_|TxPos-RcvPos|_m": 21.238511752337217,
+     "max_|TxTime-RcvTime|_s": 0.0037931539189521917,
+     "F_first_sample_mean": 9487264554.493378,
+     "F_last_sample_mean": 9712726314.95514,
+     "SCSS_rel_spread": 0.0
+    }
+   ]
+  }
+ ],
+ "vendor_sicd": [
+  {
+   "file": "2023-07-30-17-19-39_UMBRA-05_SICD.nitf",
+   "size_GB": 0.575756006,
+   "CollectionInfo/CollectorName": "Umbra-05",
+   "CollectionInfo/RadarMode/ModeType": "SPOTLIGHT",
+   "ImageCreation/Application": "Valkyrie Systems Sage | Umbra Image Formation processor 0.5.7.0",
+   "ImageCreation/DateTime": "2023-07-31T06:54:58.938920+00:00",
+   "ImageData/PixelType": "RE32F_IM32F",
+   "ImageData/NumRows": 5580,
+   "ImageData/NumCols": 12897,
+   "ImageData/FirstRow": 0,
+   "ImageData/FirstCol": 0,
+   "ImageData/FullImage/NumRows": 5580,
+   "ImageData/FullImage/NumCols": 12897,
+   "ImageData/SCPPixel/Row": 2780,
+   "ImageData/SCPPixel/Col": 6432,
+   "GeoData/SCP/ECF": [
+    3158688.25,
+    4720208.0,
+    2892512.75
+   ],
+   "GeoData/SCP/LLH": [
+    27.144885898368138,
+    56.210190272303024,
+    4.725182422436774
+   ],
+   "Grid/ImagePlane": "SLANT",
+   "Grid/Type": "RGAZIM",
+   "Grid/TimeCOAPoly": [
+    [
+     1.4069210786981314
+    ]
+   ],
+   "Grid/Row/UVectECF": [
+    -0.04239750513806939,
+    -0.9956947630271316,
+    -0.08242809679359198
+   ],
+   "Grid/Row/SS": 0.48049876717877044,
+   "Grid/Row/ImpRespWid": 0.5455413583318918,
+   "Grid/Row/Sgn": -1,
+   "Grid/Row/ImpRespBW": 1.6236022695114158,
+   "Grid/Row/KCtr": 64.0410781220773,
+   "Grid/Row/DeltaK1": -0.8118011347557044,
+   "Grid/Row/DeltaK2": 0.8118011347557115,
+   "Grid/Row/DeltaKCOAPoly": [
+    [
+     -0.0
+    ]
+   ],
+   "Grid/Row/WgtType/WindowName": null,
+   "Grid/Col/UVectECF": [
+    0.026430502999573946,
+    0.08135563507676125,
+    -0.9963346272706985
+   ],
+   "Grid/Col/SS": 0.41212682523716826,
+   "Grid/Col/ImpRespWid": 0.4611387003332243,
+   "Grid/Col/Sgn": -1,
+   "Grid/Col/ImpRespBW": 1.9207717479794089,
+   "Grid/Col/KCtr": 1.742834931928172e-08,
+   "Grid/Col/DeltaK1": -0.9603858739897044,
+   "Grid/Col/DeltaK2": 0.9603858739897044,
+   "Grid/Col/DeltaKCOAPoly": [
+    [
+     -0.0
+    ]
+   ],
+   "Grid/Col/WgtType/WindowName": null,
+   "Timeline/CollectStart": "2023-07-30T17:19:40+00:00",
+   "Timeline/CollectDuration": 2.7897117529296356,
+   "Position/ARPPoly": [
+    [
+     3186543.860240648,
+     5369119.109988218,
+     2936249.9905074374
+    ],
+    [
+     -307.86318912972126,
+     -3551.3185936610053,
+     6803.459190476319
+    ],
+    [
+     -2.1840516846487725,
+     -3.221843156795284,
+     -1.786852121780736
+    ],
+    [
+     -8.594880496044336e-05,
+     0.000822682149869149,
+     -0.0013810259414135243
+    ],
+    [
+     4.04804355798907e-08,
+     3.6122818021049994e-07,
+     2.2248267221584585e-07
+    ],
+    [
+     5.387315853017689e-10,
+     8.203204943172497e-11,
+     -5.496081642230726e-11
+    ]
+   ],
+   "RadarCollection/TxFrequency/Min": 9477820238.68058,
+   "RadarCollection/TxFrequency/Max": 9722181927.063503,
+   "RadarCollection/TxPolarization": "OTHER",
+   "ImageFormation/TStartProc": 0.00837220608191031,
+   "ImageFormation/TEndProc": 2.787568190985788,
+   "ImageFormation/TxFrequencyProc/MinProc": 9477820238.680674,
+   "ImageFormation/TxFrequencyProc/MaxProc": 9722181927.063377,
+   "ImageFormation/ImageFormAlgo": "PFA",
+   "ImageFormation/STBeamComp": "NO",
+   "ImageFormation/ImageBeamComp": "NO",
+   "ImageFormation/AzAutofocus": "NO",
+   "ImageFormation/RgAutofocus": "NO",
+   "SCPCOA/SCPTime": 1.4069210786981314,
+   "SCPCOA/ARPPos": [
+    3186106.3976206062,
+    5364116.309891043,
+    2945818.379862242
+   ],
+   "SCPCOA/ARPVel": [
+    -314.00927576056404,
+    -3560.3794624169873,
+    6798.423072204525
+   ],
+   "SCPCOA/ARPAcc": [
+    -4.368827916866859,
+    -6.4367330355778165,
+    -3.585356929007607
+   ],
+   "SCPCOA/SideOfTrack": "L",
+   "SCPCOA/SlantRange": 646692.4744735286,
+   "SCPCOA/GroundRange": 361960.239562986,
+   "SCPCOA/DopplerConeAng": 67.02522577786483,
+   "SCPCOA/GrazeAng": 52.65050250416393,
+   "SCPCOA/IncidenceAng": 37.34949749583607,
+   "SCPCOA/TwistAng": 38.94295067421776,
+   "SCPCOA/SlopeAng": 61.84520841990509,
+   "SCPCOA/AzimAng": 121.2748192297802,
+   "SCPCOA/LayoverAng": 75.80351228252984,
+   "Radiometric/NoiseLevel/NoiseLevelType": "ABSOLUTE",
+   "Radiometric/RCSSFPoly": [
+    [
+     127.20043477149153,
+     -0.00033109309905537585,
+     3.263206455868167e-05,
+     -5.991364319108732e-11,
+     4.1422822288865974e-12,
+     2.299048008656074e-17,
+     6.200059784109571e-19
+    ],
+    [
+     -0.0010429647999890513,
+     5.507668165731477e-05,
+     -3.7101391889309387e-10,
+     1.3039784855882889e-11,
+     1.8839270219713901e-16,
+     3.268444571027519e-18,
+     -3.48534807351179e-23
+    ],
+    [
+     5.6769968444632943e-05,
+     -1.5336264736961765e-09,
+     2.5880914825706948e-11,
+     3.2626535076973544e-16,
+     7.294831834375763e-18,
+     -2.659761406285245e-22,
+     4.8737879009290745e-25
+    ],
+    [
+     -1.0623608050921163e-09,
+     2.0849129898888427e-11,
+     -1.2813668880126282e-17,
+     1.2347957584843037e-17,
+     -8.583676455254161e-22,
+     1.7119811691824465e-24,
+     2.482803637900007e-29
+    ],
+    [
+     1.1912293045376272e-11,
+     -3.8120339999360864e-16,
+     1.069920301185082e-17,
+     -1.5249697464315592e-21,
+     4.642922135760822e-24,
+     1.2721236106036183e-28,
+     -2.850201845909206e-31
+    ],
+    [
+     -1.1192029613136536e-15,
+     1.136084076471724e-17,
+     -1.3872400911152678e-21,
+     3.406778208807138e-24,
+     2.621990178668143e-28,
+     -4.821321958772364e-31,
+     -3.887646975493205e-37
+    ],
+    [
+     3.521716522083062e-18,
+     -9.41783465245174e-22,
+     3.705780924658889e-24,
+     2.395223333031355e-28,
+     -1.1459132485203393e-30,
+     -5.532100193052862e-37,
+     7.201470700280862e-38
+    ]
+   ],
+   "Radiometric/SigmaZeroSFPoly": null,
+   "Radiometric/BetaZeroSFPoly": null,
+   "Radiometric/GammaZeroSFPoly": null,
+   "PFA/FPN": [
+    0.49489122768864036,
+    0.7395437266677618,
+    0.45624308194965124
+   ],
+   "PFA/IPN": [
+    0.998751160223037,
+    -0.044420719146728516,
+    0.022867437452077866
+   ],
+   "PFA/PolarAngRefTime": 1.4069210786981308,
+   "PFA/PolarAngPoly": [
+    -0.015282876111634805,
+    0.010790094156824945,
+    5.1818214104044e-05,
+    -1.7437711099786e-07,
+    -4.887213030790868e-09,
+    -2.2794214481100868e-11,
+    2.665356841273228e-13,
+    7.188538857288947e-15,
+    -4.3384032301042245e-16,
+    2.7694301791080402e-17
+   ],
+   "PFA/SpatialFreqSFPoly": [
+    0.9999854785092513,
+    2.0468726108193928e-05,
+    0.04531172587659466,
+    0.002575239360887354,
+    -0.014521594071933526,
+    0.0022551915254252148,
+    0.001277592235122444,
+    -0.025344492510022996,
+    -5.816828196502365
+   ],
+   "PFA/Krg1": 63.229276987321605,
+   "PFA/Krg2": 64.85287925683302,
+   "PFA/Kaz1": -0.9606508864647771,
+   "PFA/Kaz2": 0.9606508864647771,
+   "PFA/STDeskew/Applied": null,
+   "ImageCorners": [
+    {
+     "index": "1:FRFC",
+     "Lat": 27.17176446799631,
+     "Lon": 56.25444842980626
+    },
+    {
+     "index": "2:FRLC",
+     "Lat": 27.11905894131703,
+     "Lon": 56.21864589009583
+    },
+    {
+     "index": "3:LRLC",
+     "Lat": 27.117858338802545,
+     "Lon": 56.16568423001782
+    },
+    {
+     "index": "4:LRFC",
+     "Lat": 27.170577380430533,
+     "Lon": 56.20146153398739
+    }
+   ],
+   "top_level_blocks": [
+    "CollectionInfo",
+    "ImageCreation",
+    "ImageData",
+    "GeoData",
+    "Grid",
+    "Timeline",
+    "Position",
+    "RadarCollection",
+    "ImageFormation",
+    "SCPCOA",
+    "Radiometric",
+    "Antenna",
+    "ErrorStatistics",
+    "PFA"
+   ],
+   "Row/WgtFunct_present": false,
+   "Col/WgtFunct_present": false,
+   "Grid/Row/k=ImpRespWid*ImpRespBW": 0.8857421875,
+   "Grid/Row/SS*ImpRespBW (1/oversample)": 0.780138888888889,
+   "Grid/Col/k=ImpRespWid*ImpRespBW": 0.8857421875,
+   "Grid/Col/SS*ImpRespBW (1/oversample)": 0.7916015625
+  },
+  {
+   "file": "2023-09-11-10-37-05_UMBRA-05_SICD.nitf",
+   "size_GB": 0.089643569,
+   "CollectionInfo/CollectorName": "Umbra-05",
+   "CollectionInfo/RadarMode/ModeType": "SPOTLIGHT",
+   "ImageCreation/Application": "Valkyrie Systems Sage | Umbra Image Formation processor 0.6.1.2",
+   "ImageCreation/DateTime": "2023-09-11T13:53:41.366104+00:00",
+   "ImageData/PixelType": "RE32F_IM32F",
+   "ImageData/NumRows": 2870,
+   "ImageData/NumCols": 3903,
+   "ImageData/FirstRow": 0,
+   "ImageData/FirstCol": 0,
+   "ImageData/FullImage/NumRows": 2870,
+   "ImageData/FullImage/NumCols": 3903,
+   "ImageData/SCPPixel/Row": 1432,
+   "ImageData/SCPPixel/Col": 1955,
+   "GeoData/SCP/ECF": [
+    -5912394.53125,
+    1100674.4384765625,
+    -2117715.576171875
+   ],
+   "GeoData/SCP/LLH": [
+    -19.51969976980354,
+    169.4543154329807,
+    172.84671130031347
+   ],
+   "Grid/ImagePlane": "SLANT",
+   "Grid/Type": "RGAZIM",
+   "Grid/TimeCOAPoly": [
+    [
+     0.5044055406030087
+    ]
+   ],
+   "Grid/Row/UVectECF": [
+    0.33255467656999826,
+    -0.47526691551320255,
+    0.8145727384835482
+   ],
+   "Grid/Row/SS": 1.2723214005316874,
+   "Grid/Row/ImpRespWid": 1.4190330415655972,
+   "Grid/Row/Sgn": -1,
+   "Grid/Row/ImpRespBW": 0.6241871482589119,
+   "Grid/Row/KCtr": 64.04403323649639,
+   "Grid/Row/DeltaK1": -0.31209357412946304,
+   "Grid/Row/DeltaK2": 0.3120935741294488,
+   "Grid/Row/DeltaKCOAPoly": [
+    [
+     -1.421085471520201e-14
+    ]
+   ],
+   "Grid/Row/WgtType/WindowName": null,
+   "Grid/Col/UVectECF": [
+    -0.5651841452345252,
+    0.5910074955318123,
+    0.5755666964687407
+   ],
+   "Grid/Col/SS": 1.4164206651434756,
+   "Grid/Col/ImpRespWid": 1.6051535275386206,
+   "Grid/Col/Sgn": -1,
+   "Grid/Col/ImpRespBW": 0.5518115073130839,
+   "Grid/Col/KCtr": -8.706695364679722e-09,
+   "Grid/Col/DeltaK1": -0.27590575365654196,
+   "Grid/Col/DeltaK2": 0.27590575365654196,
+   "Grid/Col/DeltaKCOAPoly": [
+    [
+     -0.0
+    ]
+   ],
+   "Grid/Col/WgtType/WindowName": null,
+   "Timeline/CollectStart": "2023-09-11T10:37:06+00:00",
+   "Timeline/CollectDuration": 1.0001153210464848,
+   "Position/ARPPoly": [
+    [
+     -6165337.546966238,
+     1462899.197254098,
+     -2743913.1504594525
+    ],
+    [
+     -2549.317431258807,
+     2185.7345758501237,
+     6901.405918754553
+    ],
+    [
+     3.876182091984123,
+     -0.6960151185560715,
+     1.6660746121236
+    ],
+    [
+     0.00048766868840723515,
+     -0.0006296142702350219,
+     -0.0013928713521757562
+    ],
+    [
+     -1.1360612564703261e-06,
+     4.38166505032566e-08,
+     -1.6363205170131082e-07
+    ],
+    [
+     2.7549086694004543e-07,
+     7.006129134616409e-11,
+     5.2825097844394945e-09
+    ]
+   ],
+   "RadarCollection/TxFrequency/Min": 9553174284.053967,
+   "RadarCollection/TxFrequency/Max": 9646824241.150173,
+   "RadarCollection/TxPolarization": "OTHER",
+   "ImageFormation/TStartProc": 0.008849542973929826,
+   "ImageFormation/TEndProc": 0.9975714404890837,
+   "ImageFormation/TxFrequencyProc/MinProc": 9553174284.751478,
+   "ImageFormation/TxFrequencyProc/MaxProc": 9646824241.150488,
+   "ImageFormation/ImageFormAlgo": "PFA",
+   "ImageFormation/STBeamComp": "NO",
+   "ImageFormation/ImageBeamComp": "NO",
+   "ImageFormation/AzAutofocus": "NO",
+   "ImageFormation/RgAutofocus": "NO",
+   "SCPCOA/SCPTime": 0.5044055406030087,
+   "SCPCOA/ARPPos": [
+    -6166622.450543368,
+    1464001.5167200353,
+    -2740431.6193638956
+   ],
+   "SCPCOA/ARPVel": [
+    -2545.4067240804097,
+    2185.0319475396163,
+    6903.085610059421
+   ],
+   "SCPCOA/ARPAcc": [
+    7.753837319284121,
+    -1.3939355887138254,
+    3.3279333060564187
+   ],
+   "SCPCOA/SideOfTrack": "R",
+   "SCPCOA/SlantRange": 764469.5358102247,
+   "SCPCOA/GroundRange": 530312.5280333173,
+   "SCPCOA/DopplerConeAng": 60.85327683700257,
+   "SCPCOA/GrazeAng": 41.47592156246484,
+   "SCPCOA/IncidenceAng": 48.52407843753516,
+   "SCPCOA/TwistAng": -35.33630349840183,
+   "SCPCOA/SlopeAng": 52.323412039729334,
+   "SCPCOA/AzimAng": 212.84632569949454,
+   "SCPCOA/LayoverAng": 259.7962126385802,
+   "Radiometric/NoiseLevel/NoiseLevelType": null,
+   "Radiometric/RCSSFPoly": null,
+   "Radiometric/SigmaZeroSFPoly": null,
+   "Radiometric/BetaZeroSFPoly": null,
+   "Radiometric/GammaZeroSFPoly": null,
+   "PFA/FPN": [
+    -0.9266067296266556,
+    0.17250071302987635,
+    -0.3341309204697609
+   ],
+   "PFA/IPN": [
+    -0.754966402426362,
+    -0.65179099352099,
+    -0.07207101862877607
+   ],
+   "PFA/PolarAngRefTime": 0.5044055406030077,
+   "PFA/PolarAngPoly": [
+    0.004411858427719207,
+    -0.008724889496615878,
+    -4.314557568473964e-05,
+    9.390800180073959e-09,
+    2.2322663643926207e-09,
+    3.418979665465025e-11,
+    -2.7478554183769276e-11,
+    2.6675061068272613e-11,
+    -1.4333047577833557e-11,
+    3.260707042760614e-12
+   ],
+   "PFA/SpatialFreqSFPoly": [
+    0.9999805406314938,
+    -2.2713384620114967e-05,
+    0.04779939752153391,
+    -0.003995294656759425,
+    -0.019677291268261635,
+    0.7743518894179551,
+    5.773716508152422,
+    -356.63493885945365,
+    -119789.5842264956
+   ],
+   "PFA/Krg1": 63.7319396623669,
+   "PFA/Krg2": 64.35612681062581,
+   "PFA/Kaz1": -0.2761917510318708,
+   "PFA/Kaz2": 0.2761917510318708,
+   "PFA/STDeskew/Applied": null,
+   "ImageCorners": [
+    {
+     "index": "1:FRFC",
+     "Lat": -19.54920004730866,
+     "Lon": 169.45977951792582
+    },
+    {
+     "index": "2:FRLC",
+     "Lat": -19.515990460366766,
+     "Lon": 169.40553847860454
+    },
+    {
+     "index": "3:LRLC",
+     "Lat": -19.490222390049546,
+     "Lon": 169.4490402616129
+    },
+    {
+     "index": "4:LRFC",
+     "Lat": -19.52341902431755,
+     "Lon": 169.5032815859348
+    }
+   ],
+   "top_level_blocks": [
+    "CollectionInfo",
+    "ImageCreation",
+    "ImageData",
+    "GeoData",
+    "Grid",
+    "Timeline",
+    "Position",
+    "RadarCollection",
+    "ImageFormation",
+    "SCPCOA",
+    "Antenna",
+    "ErrorStatistics",
+    "PFA"
+   ],
+   "Row/WgtFunct_present": false,
+   "Col/WgtFunct_present": false,
+   "Grid/Row/k=ImpRespWid*ImpRespBW": 0.8857421875,
+   "Grid/Row/SS*ImpRespBW (1/oversample)": 0.7941666666666587,
+   "Grid/Col/k=ImpRespWid*ImpRespBW": 0.8857421875,
+   "Grid/Col/SS*ImpRespBW (1/oversample)": 0.7815972222222222
+  },
+  {
+   "file": "2023-09-13-21-18-21_UMBRA-06_SICD.nitf",
+   "size_GB": 0.105908716,
+   "CollectionInfo/CollectorName": "Umbra-06",
+   "CollectionInfo/RadarMode/ModeType": "SPOTLIGHT",
+   "ImageCreation/Application": "Valkyrie Systems Sage | Umbra Image Formation processor 0.6.1.2",
+   "ImageCreation/DateTime": "2023-09-14T00:51:15.744966+00:00",
+   "ImageData/PixelType": "RE32F_IM32F",
+   "ImageData/NumRows": 3060,
+   "ImageData/NumCols": 4325,
+   "ImageData/FirstRow": 0,
+   "ImageData/FirstCol": 0,
+   "ImageData/FullImage/NumRows": 3060,
+   "ImageData/FullImage/NumCols": 4325,
+   "ImageData/SCPPixel/Row": 1526,
+   "ImageData/SCPPixel/Col": 2167,
+   "GeoData/SCP/ECF": [
+    6181842.7734375,
+    1326637.6953125,
+    -837207.5805664062
+   ],
+   "GeoData/SCP/LLH": [
+    -7.593199990593676,
+    12.112098788066136,
+    12.26123808324337
+   ],
+   "Grid/ImagePlane": "SLANT",
+   "Grid/Type": "RGAZIM",
+   "Grid/TimeCOAPoly": [
+    [
+     0.5049121849263951
+    ]
+   ],
+   "Grid/Row/UVectECF": [
+    -0.617825691588223,
+    -0.7327290128450841,
+    -0.2853061652276665
+   ],
+   "Grid/Row/SS": 1.105378608634816,
+   "Grid/Row/ImpRespWid": 1.244511417616419,
+   "Grid/Row/Sgn": -1,
+   "Grid/Row/ImpRespBW": 0.711718811866298,
+   "Grid/Row/KCtr": 64.04397410924715,
+   "Grid/Row/DeltaK1": -0.3558594059331526,
+   "Grid/Row/DeltaK2": 0.35585940593314547,
+   "Grid/Row/DeltaKCOAPoly": [
+    [
+     -0.0
+    ]
+   ],
+   "Grid/Row/WgtType/WindowName": null,
+   "Grid/Col/UVectECF": [
+    0.27642061188817024,
+    0.13729174807667732,
+    -0.951179594732821
+   ],
+   "Grid/Col/SS": 1.2911786731730297,
+   "Grid/Col/ImpRespWid": 1.470140146068525,
+   "Grid/Col/Sgn": -1,
+   "Grid/Col/ImpRespBW": 0.6024882660803921,
+   "Grid/Col/KCtr": -2.8978550448144343e-08,
+   "Grid/Col/DeltaK1": -0.30124413304019604,
+   "Grid/Col/DeltaK2": 0.30124413304019604,
+   "Grid/Col/DeltaKCOAPoly": [
+    [
+     -0.0
+    ]
+   ],
+   "Grid/Col/WgtType/WindowName": null,
+   "Timeline/CollectStart": "2023-09-13T21:18:22+00:00",
+   "Timeline/CollectDuration": 0.9999382925917844,
+   "Position/ARPPoly": [
+    [
+     6622979.3117379425,
+     1850476.3426700209,
+     -629765.7953015874
+    ],
+    [
+     -254.60194865149114,
+     -1609.9605944894606,
+     -7504.227414107468
+    ],
+    [
+     -4.113709579169683,
+     -1.0980124155427833,
+     0.38273364095618523
+    ],
+    [
+     4.2194609545817046e-06,
+     0.000525863980424449,
+     0.0015193309983146846
+    ],
+    [
+     9.663359513405261e-07,
+     -6.191094869335417e-08,
+     -7.750765628018474e-09
+    ],
+    [
+     -1.817209702731017e-07,
+     6.240555560692138e-08,
+     -1.2701611434206038e-08
+    ]
+   ],
+   "RadarCollection/TxFrequency/Min": 9546580273.65804,
+   "RadarCollection/TxFrequency/Max": 9653416727.08746,
+   "RadarCollection/TxPolarization": "OTHER",
+   "ImageFormation/TStartProc": 0.009882573083582232,
+   "ImageFormation/TEndProc": 0.9975629801580315,
+   "ImageFormation/TxFrequencyProc/MinProc": 9546580274.006369,
+   "ImageFormation/TxFrequencyProc/MaxProc": 9653416727.087809,
+   "ImageFormation/ImageFormAlgo": "PFA",
+   "ImageFormation/STBeamComp": "NO",
+   "ImageFormation/ImageBeamComp": "NO",
+   "ImageFormation/AzAutofocus": "NO",
+   "ImageFormation/RgAutofocus": "NO",
+   "SCPCOA/SCPTime": 0.5049121849263951,
+   "SCPCOA/ARPPos": [
+    6622849.711378403,
+    1849663.174093061,
+    -633554.6733931571
+   ],
+   "SCPCOA/ARPVel": [
+    -258.7560691694558,
+    -1611.0689920111988,
+    -7503.839758359851
+   ],
+   "SCPCOA/ARPAcc": [
+    -8.227403887170462,
+    -2.1944317690403485,
+    0.7700699979057206
+   ],
+   "SCPCOA/SideOfTrack": "R",
+   "SCPCOA/SlantRange": 713804.7893967667,
+   "SCPCOA/GroundRange": 462114.0788840064,
+   "SCPCOA/DopplerConeAng": 63.04227047982193,
+   "SCPCOA/GrazeAng": 45.51811418100378,
+   "SCPCOA/IncidenceAng": 44.48188581899622,
+   "SCPCOA/TwistAng": -37.04686890160895,
+   "SCPCOA/SlopeAng": 55.99634549741713,
+   "SCPCOA/AzimAng": 56.87104083045872,
+   "SCPCOA/LayoverAng": 103.48475634844542,
+   "Radiometric/NoiseLevel/NoiseLevelType": null,
+   "Radiometric/RCSSFPoly": null,
+   "Radiometric/SigmaZeroSFPoly": null,
+   "Radiometric/BetaZeroSFPoly": null,
+   "Radiometric/GammaZeroSFPoly": null,
+   "PFA/FPN": [
+    0.9691653791815042,
+    0.2079851385205984,
+    -0.13213875354267657
+   ],
+   "PFA/IPN": [
+    0.7361270673573017,
+    -0.666527695953846,
+    0.11771903256885707
+   ],
+   "PFA/PolarAngRefTime": 0.5049121849263944,
+   "PFA/PolarAngPoly": [
+    0.004829735957383477,
+    -0.009541822056149334,
+    -4.691997043252243e-05,
+    5.6042331927974485e-08,
+    3.1202666138340975e-09,
+    4.111148064722652e-12,
+    2.997872375210644e-11,
+    -3.0836949146625935e-11,
+    1.6755870478174503e-11,
+    -3.750529289633794e-12
+   ],
+   "PFA/SpatialFreqSFPoly": [
+    0.9999829713569703,
+    -2.128853788075685e-05,
+    0.04376585798694623,
+    -0.0038958963698529307,
+    -0.015073641172677009,
+    -0.28042403045614595,
+    -0.5506890690982426,
+    219.6767762294757,
+    9077.635670272834
+   ],
+   "PFA/Krg1": 63.68811470331399,
+   "PFA/Krg2": 64.39983351518029,
+   "PFA/Kaz1": -0.30162914508530836,
+   "PFA/Kaz2": 0.30162914508530836,
+   "PFA/STDeskew/Applied": null,
+   "ImageCorners": [
+    {
+     "index": "1:FRFC",
+     "Lat": -7.564568586078047,
+     "Lon": 12.119430893753618
+    },
+    {
+     "index": "2:FRLC",
+     "Lat": -7.6175470746710365,
+     "Lon": 12.154085842235833
+    },
+    {
+     "index": "3:LRLC",
+     "Lat": -7.621718269885892,
+     "Lon": 12.104572320867316
+    },
+    {
+     "index": "4:LRFC",
+     "Lat": -7.568735843531294,
+     "Lon": 12.069923101461349
+    }
+   ],
+   "top_level_blocks": [
+    "CollectionInfo",
+    "ImageCreation",
+    "ImageData",
+    "GeoData",
+    "Grid",
+    "Timeline",
+    "Position",
+    "RadarCollection",
+    "ImageFormation",
+    "SCPCOA",
+    "Antenna",
+    "ErrorStatistics",
+    "PFA"
+   ],
+   "Row/WgtFunct_present": false,
+   "Col/WgtFunct_present": false,
+   "Grid/Row/k=ImpRespWid*ImpRespBW": 0.8857421874999999,
+   "Grid/Row/SS*ImpRespBW (1/oversample)": 0.7867187499999929,
+   "Grid/Col/k=ImpRespWid*ImpRespBW": 0.8857421875,
+   "Grid/Col/SS*ImpRespBW (1/oversample)": 0.77792
+  },
+  {
+   "file": "2023-10-04-02-03-26_UMBRA-04_SICD.nitf",
+   "size_GB": 0.14865296,
+   "CollectionInfo/CollectorName": "Umbra-04",
+   "CollectionInfo/RadarMode/ModeType": "SPOTLIGHT",
+   "ImageCreation/Application": "Valkyrie Systems Sage | Umbra Image Formation processor 0.6.4.1",
+   "ImageCreation/DateTime": "2023-10-04T05:34:22.709291+00:00",
+   "ImageData/PixelType": "RE32F_IM32F",
+   "ImageData/NumRows": 3479,
+   "ImageData/NumCols": 5340,
+   "ImageData/FirstRow": 0,
+   "ImageData/FirstCol": 0,
+   "ImageData/FullImage/NumRows": 3479,
+   "ImageData/FullImage/NumCols": 5340,
+   "ImageData/SCPPixel/Row": 1732,
+   "ImageData/SCPPixel/Col": 2675,
+   "GeoData/SCP/ECF": [
+    2507068.115234375,
+    -5850408.203125,
+    410226.1047363281
+   ],
+   "GeoData/SCP/LLH": [
+    3.712437949139338,
+    -66.80347536893738,
+    114.0356287797913
+   ],
+   "Grid/ImagePlane": "SLANT",
+   "Grid/Type": "RGAZIM",
+   "Grid/TimeCOAPoly": [
+    [
+     0.5035276199436152
+    ]
+   ],
+   "Grid/Row/UVectECF": [
+    -0.04919970268383622,
+    0.9180706404149532,
+    0.39335186342941597
+   ],
+   "Grid/Row/SS": 0.7437809848783306,
+   "Grid/Row/ImpRespWid": 0.8259052197719156,
+   "Grid/Row/Sgn": -1,
+   "Grid/Row/ImpRespBW": 1.0724501629189476,
+   "Grid/Row/KCtr": 64.04390009105823,
+   "Grid/Row/DeltaK1": -0.5362250814594702,
+   "Grid/Row/DeltaK2": 0.5362250814594773,
+   "Grid/Row/DeltaKCOAPoly": [
+    [
+     -0.0
+    ]
+   ],
+   "Grid/Row/WgtType/WindowName": null,
+   "Grid/Col/UVectECF": [
+    -0.1841997499577701,
+    -0.3954137098044157,
+    0.8998435697867535
+   ],
+   "Grid/Col/SS": 1.0782256213466894,
+   "Grid/Col/ImpRespWid": 1.2017153840239734,
+   "Grid/Col/Sgn": -1,
+   "Grid/Col/ImpRespBW": 0.7370648651713775,
+   "Grid/Col/KCtr": -6.1631253434057995e-09,
+   "Grid/Col/DeltaK1": -0.36853243258568874,
+   "Grid/Col/DeltaK2": 0.36853243258568874,
+   "Grid/Col/DeltaKCOAPoly": [
+    [
+     -0.0
+    ]
+   ],
+   "Grid/Col/WgtType/WindowName": null,
+   "Timeline/CollectStart": "2023-10-04T02:03:27+00:00",
+   "Timeline/CollectDuration": 1.0001000861970346,
+   "Position/ARPPoly": [
+    [
+     2537994.4966250854,
+     -6413622.436347906,
+     165041.05682647615
+    ],
+    [
+     -1456.144361382076,
+     -370.4982018408033,
+     7534.201302640858
+    ],
+    [
+     -1.5624850048536578,
+     3.986379062400459,
+     -0.10056706383084682
+    ],
+    [
+     0.00048591961376416365,
+     0.00015288788302256315,
+     -0.0015301989873245023
+    ],
+    [
+     -6.028435471947931e-07,
+     3.042183688366512e-06,
+     -6.474872664804772e-08
+    ],
+    [
+     2.704668777454634e-07,
+     -1.2465093436715016e-06,
+     2.620828924491443e-08
+    ]
+   ],
+   "RadarCollection/TxFrequency/Min": 9519545506.68597,
+   "RadarCollection/TxFrequency/Max": 9680478366.091846,
+   "RadarCollection/TxPolarization": "OTHER",
+   "ImageFormation/TStartProc": 0.006837299732880989,
+   "ImageFormation/TEndProc": 0.9980574896478906,
+   "ImageFormation/TxFrequencyProc/MinProc": 9519545506.685984,
+   "ImageFormation/TxFrequencyProc/MaxProc": 9680478366.091867,
+   "ImageFormation/ImageFormAlgo": "PFA",
+   "ImageFormation/STBeamComp": "NO",
+   "ImageFormation/ImageBeamComp": "NO",
+   "ImageFormation/AzAutofocus": "NO",
+   "ImageFormation/RgAutofocus": "NO",
+   "SCPCOA/SCPTime": 0.5035276199436152,
+   "SCPCOA/ARPPos": [
+    2537260.891629961,
+    -6413807.981699196,
+    168834.7095834359
+   ],
+   "SCPCOA/ARPVel": [
+    -1457.7175007141045,
+    -366.48358047535476,
+    7534.098862127378
+   ],
+   "SCPCOA/ARPAcc": [
+    -3.1235031095876304,
+    7.973226097519451,
+    -0.20575724246589153
+   ],
+   "SCPCOA/SideOfTrack": "R",
+   "SCPCOA/SlantRange": 613678.0262464889,
+   "SCPCOA/GroundRange": 311295.96350402443,
+   "SCPCOA/DopplerConeAng": 69.43373903759029,
+   "SCPCOA/GrazeAng": 56.71506127487979,
+   "SCPCOA/IncidenceAng": 33.28493872512021,
+   "SCPCOA/TwistAng": -39.42781867348685,
+   "SCPCOA/SlopeAng": 64.91834886571756,
+   "SCPCOA/AzimAng": 215.20576472339366,
+   "SCPCOA/LayoverAng": 259.731391885684,
+   "Radiometric/NoiseLevel/NoiseLevelType": null,
+   "Radiometric/RCSSFPoly": null,
+   "Radiometric/SigmaZeroSFPoly": null,
+   "Radiometric/BetaZeroSFPoly": null,
+   "Radiometric/GammaZeroSFPoly": null,
+   "PFA/FPN": [
+    0.3930596304126084,
+    -0.9172304514795542,
+    0.06474894407438114
+   ],
+   "PFA/IPN": [
+    0.9816566822119057,
+    -0.028183278627693653,
+    0.18856261938344687
+   ],
+   "PFA/PolarAngRefTime": 0.5035276199436237,
+   "PFA/PolarAngPoly": [
+    0.005888756207682647,
+    -0.011668904366013998,
+    -5.197773743320712e-05,
+    2.9289489809963723e-07,
+    5.98610447599089e-09,
+    2.773379310552034e-11,
+    -2.2763941390089185e-11,
+    2.3252616673400475e-11,
+    -1.294828016029155e-11,
+    2.983598869268074e-12
+   ],
+   "PFA/SpatialFreqSFPoly": [
+    0.9999858268884249,
+    -2.2426161984748784e-05,
+    0.038943490435792226,
+    -0.001258861485309086,
+    -0.012024767350521118,
+    -0.11522468641673243,
+    1.2551620658197198,
+    -68.73599277338471,
+    -24685.077001117064
+   ],
+   "PFA/Krg1": 63.50767500959872,
+   "PFA/Krg2": 64.58012517251767,
+   "PFA/Kaz1": -0.36885446372216696,
+   "PFA/Kaz2": 0.36885446372216696,
+   "PFA/STDeskew/Applied": null,
+   "ImageCorners": [
+    {
+     "index": "1:FRFC",
+     "Lat": 3.6840313251604138,
+     "Lon": -66.80006165226641
+    },
+    {
+     "index": "2:FRLC",
+     "Lat": 3.7228917715752314,
+     "Lon": -66.8548885517697
+    },
+    {
+     "index": "3:LRLC",
+     "Lat": 3.7408366970696267,
+     "Lon": -66.80658196489875
+    },
+    {
+     "index": "4:LRFC",
+     "Lat": 3.7019732597631356,
+     "Lon": -66.75175607074154
+    }
+   ],
+   "top_level_blocks": [
+    "CollectionInfo",
+    "ImageCreation",
+    "ImageData",
+    "GeoData",
+    "Grid",
+    "Timeline",
+    "Position",
+    "RadarCollection",
+    "ImageFormation",
+    "SCPCOA",
+    "Antenna",
+    "ErrorStatistics",
+    "PFA"
+   ],
+   "Row/WgtFunct_present": false,
+   "Col/WgtFunct_present": false,
+   "Grid/Row/k=ImpRespWid*ImpRespBW": 0.8857421875,
+   "Grid/Row/SS*ImpRespBW (1/oversample)": 0.7976680384087809,
+   "Grid/Col/k=ImpRespWid*ImpRespBW": 0.8857421875,
+   "Grid/Col/SS*ImpRespBW (1/oversample)": 0.7947222222222223
+  },
+  {
+   "file": "2023-11-14-03-38-20_UMBRA-04_SICD.nitf",
+   "size_GB": 0.351211921,
+   "CollectionInfo/CollectorName": "Umbra-04",
+   "CollectionInfo/RadarMode/ModeType": "SPOTLIGHT",
+   "ImageCreation/Application": "Valkyrie Systems Sage | Umbra Image Formation processor 0.7.1.1",
+   "ImageCreation/DateTime": "2023-11-14T09:23:51.727398+00:00",
+   "ImageData/PixelType": "RE32F_IM32F",
+   "ImageData/NumRows": 5086,
+   "ImageData/NumCols": 8631,
+   "ImageData/FirstRow": 0,
+   "ImageData/FirstCol": 0,
+   "ImageData/FullImage/NumRows": 5086,
+   "ImageData/FullImage/NumCols": 8631,
+   "ImageData/SCPPixel/Row": 2532,
+   "ImageData/SCPPixel/Col": 4326,
+   "GeoData/SCP/ECF": [
+    -546747.4365234375,
+    -4322648.4375,
+    4642683.59375
+   ],
+   "GeoData/SCP/LLH": [
+    47.009576595185656,
+    -97.20874033391662,
+    263.56314760725945
+   ],
+   "Grid/ImagePlane": "SLANT",
+   "Grid/Type": "RGAZIM",
+   "Grid/TimeCOAPoly": [
+    [
+     0.966614536784914
+    ]
+   ],
+   "Grid/Row/UVectECF": [
+    0.4059746020939201,
+    0.8701219046488404,
+    -0.2794145541265607
+   ],
+   "Grid/Row/SS": 0.49735981214613917,
+   "Grid/Row/ImpRespWid": 0.5617470482373829,
+   "Grid/Row/Sgn": -1,
+   "Grid/Row/ImpRespBW": 1.5767634031709292,
+   "Grid/Row/KCtr": 64.04254037241425,
+   "Grid/Row/DeltaK1": -0.7883817015854646,
+   "Grid/Row/DeltaK2": 0.7883817015854646,
+   "Grid/Row/DeltaKCOAPoly": [
+    [
+     -0.0
+    ]
+   ],
+   "Grid/Row/WgtType/WindowName": null,
+   "Grid/Col/UVectECF": [
+    -0.2879579841392115,
+    0.41196351777762175,
+    0.8645034758374095
+   ],
+   "Grid/Col/SS": 0.6406926100756792,
+   "Grid/Col/ImpRespWid": 0.7396181917514156,
+   "Grid/Col/Sgn": -1,
+   "Grid/Col/ImpRespBW": 1.1975667951089235,
+   "Grid/Col/KCtr": -1.0745559553271276e-08,
+   "Grid/Col/DeltaK1": -0.5987833975544617,
+   "Grid/Col/DeltaK2": 0.5987833975544617,
+   "Grid/Col/DeltaKCOAPoly": [
+    [
+     -0.0
+    ]
+   ],
+   "Grid/Col/WgtType/WindowName": null,
+   "Timeline/CollectStart": "2023-11-14T03:38:21+00:00",
+   "Timeline/CollectDuration": 1.9185253382147862,
+   "Position/ARPPoly": [
+    [
+     -792290.6980068682,
+     -4856000.0277956845,
+     4807092.954182993
+    ],
+    [
+     -874.3313031816099,
+     5450.330881937905,
+     5349.788490205641
+    ],
+    [
+     0.8795069997242524,
+     3.0183470140677477,
+     -2.945835825753133
+    ],
+    [
+     0.0003233546921839251,
+     -0.001151910797946893,
+     -0.0010886189626592476
+    ],
+    [
+     -1.253057172918482e-07,
+     -3.174064801788296e-07,
+     2.611938803158333e-07
+    ],
+    [
+     -1.441420975790296e-09,
+     -3.8875607646666567e-10,
+     8.611118705502472e-09
+    ]
+   ],
+   "RadarCollection/TxFrequency/Min": 9455662538.64672,
+   "RadarCollection/TxFrequency/Max": 9744347622.036003,
+   "RadarCollection/TxPolarization": "OTHER",
+   "ImageFormation/TStartProc": 0.008017172890526518,
+   "ImageFormation/TEndProc": 1.9165099896339248,
+   "ImageFormation/TxFrequencyProc/MinProc": 9455662538.646719,
+   "ImageFormation/TxFrequencyProc/MaxProc": 9744347622.035938,
+   "ImageFormation/ImageFormAlgo": "PFA",
+   "ImageFormation/STBeamComp": "NO",
+   "ImageFormation/ImageBeamComp": "NO",
+   "ImageFormation/AzAutofocus": "NO",
+   "ImageFormation/RgAutofocus": "NO",
+   "SCPCOA/SCPTime": 0.966614536784914,
+   "SCPCOA/ARPPos": [
+    -793135.017300771,
+    -4850728.839602137,
+    4812261.384100364
+   ],
+   "SCPCOA/ARPVel": [
+    -872.6301087650837,
+    5456.162808149602,
+    5344.090464289821
+   ],
+   "SCPCOA/ARPAcc": [
+    1.7608879245448943,
+    6.030009739978344,
+    -5.897982216911395
+   ],
+   "SCPCOA/SideOfTrack": "R",
+   "SCPCOA/SlantRange": 606903.9281680204,
+   "SCPCOA/GroundRange": 314003.4352535968,
+   "SCPCOA/DopplerConeAng": 67.83566394781666,
+   "SCPCOA/GrazeAng": 55.86783064149226,
+   "SCPCOA/IncidenceAng": 34.13216935850774,
+   "SCPCOA/TwistAng": -42.39365956506928,
+   "SCPCOA/SlopeAng": 65.51896718618465,
+   "SCPCOA/AzimAng": 211.54824955308808,
+   "SCPCOA/LayoverAng": 259.34970342963544,
+   "Radiometric/NoiseLevel/NoiseLevelType": "ABSOLUTE",
+   "Radiometric/RCSSFPoly": [
+    [
+     178.82658261702667,
+     -0.04891005287408732,
+     6.349396144328463e-05,
+     -1.4239577808616712e-08,
+     1.0625341649750627e-11,
+     -5.3212907319449105e-15,
+     2.53141420365993e-18
+    ],
+    [
+     0.057161528091788934,
+     -0.0001322752529594915,
+     4.572792963865196e-08,
+     -4.469742506870313e-11,
+     2.8059372180724454e-14,
+     -1.5849813408406284e-17,
+     7.513640057040117e-23
+    ],
+    [
+     0.0001361191979143547,
+     -7.172570986532513e-08,
+     9.400007014273623e-11,
+     -5.900793550367368e-14,
+     4.313326668441155e-17,
+     -3.903180908170008e-21,
+     2.0922081314354865e-24
+    ],
+    [
+     3.890361568993361e-08,
+     -1.0519378956737994e-10,
+     8.337009430162051e-14,
+     -6.146238368758182e-17,
+     6.4478556223356775e-21,
+     -1.348510446335091e-23,
+     1.7145220854589896e-27
+    ],
+    [
+     4.0151364522947135e-11,
+     -3.718700555497059e-14,
+     6.654624008760619e-17,
+     -3.923290258172382e-20,
+     3.5893302256700106e-23,
+     -2.4759545188126005e-28,
+     -5.996407017367384e-31
+    ],
+    [
+     1.580938177415581e-14,
+     -3.0164815459910026e-17,
+     1.5691666693580676e-20,
+     -6.432914770853202e-23,
+     2.4315662024698078e-26,
+     4.376565360920675e-30,
+     -3.341558151521696e-33
+    ],
+    [
+     2.8423494788203106e-17,
+     -3.614316397431871e-20,
+     4.64762770723947e-23,
+     -3.294700401286158e-27,
+     -6.0583113227926595e-30,
+     -8.431132071677591e-34,
+     4.660637415871817e-38
+    ],
+    [
+     7.814487328688696e-21,
+     -3.0424470368585626e-23,
+     1.8516091558708622e-26,
+     9.803336512585469e-30,
+     -1.0348619837003781e-32,
+     -7.975088313158574e-37,
+     1.7840207088563288e-39
+    ]
+   ],
+   "Radiometric/SigmaZeroSFPoly": null,
+   "Radiometric/BetaZeroSFPoly": null,
+   "Radiometric/GammaZeroSFPoly": null,
+   "PFA/FPN": [
+    -0.08556492789648473,
+    -0.676486230455339,
+    0.7314677182585001
+   ],
+   "PFA/IPN": [
+    0.8673320135567337,
+    -0.2705068029463291,
+    0.41780527494847775
+   ],
+   "PFA/PolarAngRefTime": 0.9666145367849114,
+   "PFA/PolarAngPoly": [
+    0.011286429384655084,
+    -0.01162223140292466,
+    -5.610707214908578e-05,
+    2.2839222783985403e-07,
+    6.03102906744893e-09,
+    2.5291181228492127e-11,
+    4.9499777480687514e-14,
+    -2.2582695814569858e-13,
+    5.694858214033177e-14,
+    -6.206058436315288e-15
+   ],
+   "PFA/SpatialFreqSFPoly": [
+    0.9999871039717232,
+    -2.1719737265895727e-05,
+    0.03071493343579471,
+    -0.0015178112446882148,
+    -0.010567766694476262,
+    0.00230362393605633,
+    -0.015676079855783308,
+    -0.1401605688325323,
+    23.676326089515054
+   ],
+   "PFA/Krg1": 63.25415867082879,
+   "PFA/Krg2": 64.83092207399972,
+   "PFA/Kaz1": -0.5992048075445107,
+   "PFA/Kaz2": 0.5992048075445107,
+   "PFA/STDeskew/Applied": null,
+   "ImageCorners": [
+    {
+     "index": "1:FRFC",
+     "Lat": 46.982688341556475,
+     "Lon": -97.20113710653575
+    },
+    {
+     "index": "2:FRLC",
+     "Lat": 47.017901482058754,
+     "Lon": -97.28505450345205
+    },
+    {
+     "index": "3:LRLC",
+     "Lat": 47.036450914657955,
+     "Lon": -97.21585135854001
+    },
+    {
+     "index": "4:LRFC",
+     "Lat": 47.00118718728052,
+     "Lon": -97.13195046067223
+    }
+   ],
+   "top_level_blocks": [
+    "CollectionInfo",
+    "ImageCreation",
+    "ImageData",
+    "GeoData",
+    "Grid",
+    "Timeline",
+    "Position",
+    "RadarCollection",
+    "ImageFormation",
+    "SCPCOA",
+    "Radiometric",
+    "Antenna",
+    "ErrorStatistics",
+    "PFA"
+   ],
+   "Row/WgtFunct_present": false,
+   "Col/WgtFunct_present": false,
+   "Grid/Row/k=ImpRespWid*ImpRespBW": 0.8857421874999999,
+   "Grid/Row/SS*ImpRespBW (1/oversample)": 0.7842187500000004,
+   "Grid/Col/k=ImpRespWid*ImpRespBW": 0.8857421875000001,
+   "Grid/Col/SS*ImpRespBW (1/oversample)": 0.7672721956983024
+  },
+  {
+   "file": "2025-10-26-05-00-15_UMBRA-08_SICD.nitf",
+   "size_GB": 0.399331946,
+   "CollectionInfo/CollectorName": "Umbra-08",
+   "CollectionInfo/RadarMode/ModeType": "SPOTLIGHT",
+   "ImageCreation/Application": "Umbra SAR Processor 4.25.1",
+   "ImageCreation/DateTime": "2025-10-26T08:29:31.879423+00:00",
+   "ImageData/PixelType": "RE32F_IM32F",
+   "ImageData/NumRows": 6655,
+   "ImageData/NumCols": 7500,
+   "ImageData/FirstRow": 0,
+   "ImageData/FirstCol": 0,
+   "ImageData/FullImage/NumRows": 6655,
+   "ImageData/FullImage/NumCols": 7500,
+   "ImageData/SCPPixel/Row": 3327,
+   "ImageData/SCPPixel/Col": 3750,
+   "GeoData/SCP/ECF": [
+    -519084.3505859375,
+    -4334657.2265625,
+    4634686.5234375
+   ],
+   "GeoData/SCP/LLH": [
+    46.90434806820335,
+    -96.82877159269106,
+    246.95744863277233
+   ],
+   "Grid/ImagePlane": "SLANT",
+   "Grid/Type": "RGAZIM",
+   "Grid/TimeCOAPoly": [
+    [
+     0.6991099895766734
+    ]
+   ],
+   "Grid/Row/UVectECF": [
+    0.7277536161249561,
+    0.6023101515143874,
+    -0.3280200536549034
+   ],
+   "Grid/Row/SS": 0.6384273465720071,
+   "Grid/Row/ImpRespWid": 0.7069784829101763,
+   "Grid/Row/Sgn": -1,
+   "Grid/Row/ImpRespBW": 1.2530791550448874,
+   "Grid/Row/KCtr": 63.919516717039315,
+   "Grid/Row/DeltaK1": -0.6265395775224437,
+   "Grid/Row/DeltaK2": 0.6265395775224437,
+   "Grid/Row/DeltaKCOAPoly": [
+    [
+     0.0
+    ]
+   ],
+   "Grid/Row/WgtType/WindowName": "UNIFORM",
+   "Grid/Col/UVectECF": [
+    -0.19688506616615828,
+    0.641618246832085,
+    0.7413246900332331
+   ],
+   "Grid/Col/SS": 0.8894747469741814,
+   "Grid/Col/ImpRespWid": 0.9849820979305342,
+   "Grid/Col/Sgn": -1,
+   "Grid/Col/ImpRespBW": 0.8994072093912089,
+   "Grid/Col/KCtr": 0.0,
+   "Grid/Col/DeltaK1": -0.44970360469560444,
+   "Grid/Col/DeltaK2": 0.44970360469560444,
+   "Grid/Col/DeltaKCOAPoly": [
+    [
+     0.0
+    ]
+   ],
+   "Grid/Col/WgtType/WindowName": "UNIFORM",
+   "Timeline/CollectStart": "2025-10-26T05:00:15+00:00",
+   "Timeline/CollectDuration": 1.2268713546666667,
+   "Position/ARPPoly": [
+    [
+     -931803.6555465282,
+     -4680538.340769135,
+     4817219.347950117
+    ],
+    [
+     -668.9845598556436,
+     5599.132702048462,
+     5298.230179988511
+    ],
+    [
+     1.0000799890994505,
+     3.0215726677612906,
+     -3.081247536802799
+    ],
+    [
+     0.00028770715829573834,
+     -0.0012381459137034319,
+     -0.0011254534864050434
+    ],
+    [
+     -1.4109838386670285e-07,
+     -2.651542360920965e-07,
+     2.3535893369738134e-07
+    ],
+    [
+     -1.9712753842400417e-09,
+     -1.6921046854310464e-08,
+     2.324271428217232e-08
+    ]
+   ],
+   "RadarCollection/TxFrequency/Min": 9487378595.396875,
+   "RadarCollection/TxFrequency/Max": 9712619489.058851,
+   "RadarCollection/TxPolarization": "V",
+   "ImageFormation/TStartProc": 0.16988566939832678,
+   "ImageFormation/TEndProc": 1.2270100043016798,
+   "ImageFormation/TxFrequencyProc/MinProc": 9487378595.396875,
+   "ImageFormation/TxFrequencyProc/MaxProc": 9675210435.376612,
+   "ImageFormation/ImageFormAlgo": "PFA",
+   "ImageFormation/STBeamComp": "NO",
+   "ImageFormation/ImageBeamComp": "SV",
+   "ImageFormation/AzAutofocus": "NO",
+   "ImageFormation/RgAutofocus": "NO",
+   "SCPCOA/SCPTime": 0.6991099895766734,
+   "SCPCOA/ARPPos": [
+    -932270.8604430493,
+    -4676622.4547792245,
+    4820921.887237068
+   ],
+   "SCPCOA/ARPVel": [
+    -667.5858059537227,
+    5603.355706124348,
+    5293.920264991264
+   ],
+   "SCPCOA/ARPAcc": [
+    2.001365967040489,
+    6.03795004445192,
+    -6.1672144226093835
+   ],
+   "SCPCOA/SideOfTrack": "R",
+   "SCPCOA/SlantRange": 567756.0391284053,
+   "SCPCOA/GroundRange": 376617.9366772367,
+   "SCPCOA/DopplerConeAng": 81.43310940721184,
+   "SCPCOA/GrazeAng": 45.010394808416144,
+   "SCPCOA/IncidenceAng": 44.989605191583856,
+   "SCPCOA/TwistAng": -9.942309972004852,
+   "SCPCOA/SlopeAng": 45.864217307375434,
+   "SCPCOA/AzimAng": 247.04100290366392,
+   "SCPCOA/LayoverAng": 260.96130693013595,
+   "Radiometric/NoiseLevel/NoiseLevelType": "ABSOLUTE",
+   "Radiometric/RCSSFPoly": [
+    [
+     0.019983157377208252,
+     -6.901313696720992e-13,
+     6.348493403470636e-17,
+     -5.0899122033982595e-20,
+     -4.475357027190302e-23
+    ],
+    [
+     1.4079135004973175e-07,
+     1.035032530548126e-15,
+     2.443710034382708e-19,
+     -9.538546704846193e-23,
+     0.0
+    ],
+    [
+     3.706065208843406e-13,
+     3.056516443720656e-19,
+     3.333955950509946e-22,
+     0.0,
+     0.0
+    ],
+    [
+     -6.118349042929706e-19,
+     -7.538324078880089e-23,
+     0.0,
+     0.0,
+     0.0
+    ],
+    [
+     -1.6499951190361944e-22,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   ],
+   "Radiometric/SigmaZeroSFPoly": [
+    [
+     0.01568315779196671,
+     -5.416280802601441e-13,
+     4.982417037932542e-17,
+     -3.994658838257318e-20,
+     -3.5123443762127914e-23
+    ],
+    [
+     1.104956997982888e-07,
+     8.123129988917015e-16,
+     1.9178696010645447e-19,
+     -7.486030873617935e-23,
+     0.0
+    ],
+    [
+     2.90858968682802e-13,
+     2.3988115979752576e-19,
+     2.6165513415287226e-22,
+     0.0,
+     0.0
+    ],
+    [
+     -4.801795414774463e-19,
+     -5.916218532657883e-23,
+     0.0,
+     0.0,
+     0.0
+    ],
+    [
+     -1.2949472057570664e-22,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   ],
+   "Radiometric/BetaZeroSFPoly": [
+    [
+     0.022521586405049872,
+     -7.777976712845672e-13,
+     7.154932527891037e-17,
+     -5.736475738998882e-20,
+     -5.0438545860761615e-23
+    ],
+    [
+     1.5867585363888273e-07,
+     1.1665110837471494e-15,
+     2.7541306736146214e-19,
+     -1.0750213278949273e-22,
+     0.0
+    ],
+    [
+     4.176840838921354e-13,
+     3.4447809165644206e-19,
+     3.757463127207269e-22,
+     0.0,
+     0.0
+    ],
+    [
+     -6.895553291481218e-19,
+     -8.49590552118668e-23,
+     0.0,
+     0.0,
+     0.0
+    ],
+    [
+     -1.859591401890651e-22,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   ],
+   "Radiometric/GammaZeroSFPoly": [
+    [
+     0.02217531168961678,
+     -7.658388482050262e-13,
+     7.0449237487367e-17,
+     -5.648276068319144e-20,
+     -4.966304129369088e-23
+    ],
+    [
+     1.562361748757301e-07,
+     1.1485757000530627e-15,
+     2.7117852633882075e-19,
+     -1.0584926208266786e-22,
+     0.0
+    ],
+    [
+     4.112620923552403e-13,
+     3.3918165955721286e-19,
+     3.699691243303376e-22,
+     0.0,
+     0.0
+    ],
+    [
+     -6.789532529407992e-19,
+     -8.365278965233423e-23,
+     0.0,
+     0.0,
+     0.0
+    ],
+    [
+     -1.8309997444500756e-22,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   ],
+   "PFA/FPN": [
+    -0.08123642579959901,
+    -0.6783715589862364,
+    0.7302141268709401
+   ],
+   "PFA/IPN": [
+    0.6569710381270985,
+    -0.47491947392672523,
+    0.5855258733372636
+   ],
+   "PFA/PolarAngRefTime": 0.6991099895766734,
+   "PFA/PolarAngPoly": [
+    0.00940777557343197,
+    -0.013437048922174623,
+    -2.873440340602987e-05,
+    7.277840265042163e-07,
+    4.973844907276005e-09,
+    -6.5914253605423e-11
+   ],
+   "PFA/SpatialFreqSFPoly": [
+    0.9999999999999907,
+    4.980288951152185e-12,
+    0.025431506143942167,
+    -0.0005175481420063408,
+    -0.008417927565484174,
+    -0.0003076381624108599
+   ],
+   "PFA/Krg1": 63.29297713951687,
+   "PFA/Krg2": 64.54605629456177,
+   "PFA/Kaz1": -0.44970360469560444,
+   "PFA/Kaz2": 0.44970360469560444,
+   "PFA/STDeskew/Applied": null,
+   "ImageCorners": [
+    {
+     "index": "1:FRFC",
+     "Lat": 46.86891882284632,
+     "Lon": -96.84992291528327
+    },
+    {
+     "index": "2:FRLC",
+     "Lat": 46.924781318040935,
+     "Lon": -96.88458329225124
+    },
+    {
+     "index": "3:LRLC",
+     "Lat": 46.93992842793137,
+     "Lon": -96.80815182475145
+    },
+    {
+     "index": "4:LRFC",
+     "Lat": 46.88360565570167,
+     "Lon": -96.77346944775738
+    }
+   ],
+   "top_level_blocks": [
+    "CollectionInfo",
+    "ImageCreation",
+    "ImageData",
+    "GeoData",
+    "Grid",
+    "Timeline",
+    "Position",
+    "RadarCollection",
+    "ImageFormation",
+    "SCPCOA",
+    "Radiometric",
+    "Antenna",
+    "ErrorStatistics",
+    "PFA"
+   ],
+   "Row/WgtFunct_present": false,
+   "Col/WgtFunct_present": false,
+   "Grid/Row/k=ImpRespWid*ImpRespBW": 0.8859000000000001,
+   "Grid/Row/SS*ImpRespBW (1/oversample)": 0.8000000000000002,
+   "Grid/Col/k=ImpRespWid*ImpRespBW": 0.8859000000000001,
+   "Grid/Col/SS*ImpRespBW (1/oversample)": 0.8
+  }
+ ],
+ "diffpfa_sicd": [
+  {
+   "file": "2023-07-30-17-19-39_UMBRA-05_SICDU_X_X.nitf",
+   "size_GB": 0.665289677,
+   "CollectionInfo/CollectorName": "CZTPFA",
+   "CollectionInfo/RadarMode/ModeType": "SPOTLIGHT",
+   "ImageCreation/Application": "diffpfa",
+   "ImageCreation/DateTime": "2026-08-29T18:25:36.674707+00:00",
+   "ImageData/PixelType": "RE32F_IM32F",
+   "ImageData/NumRows": 8400,
+   "ImageData/NumCols": 9900,
+   "ImageData/FirstRow": 0,
+   "ImageData/FirstCol": 0,
+   "ImageData/FullImage/NumRows": 8400,
+   "ImageData/FullImage/NumCols": 9900,
+   "ImageData/SCPPixel/Row": 4200,
+   "ImageData/SCPPixel/Col": 4950,
+   "GeoData/SCP/ECF": [
+    3158688.25,
+    4720208.0,
+    2892512.75
+   ],
+   "GeoData/SCP/LLH": [
+    27.144885898368138,
+    56.210190272303024,
+    4.725182422436774
+   ],
+   "Grid/ImagePlane": "SLANT",
+   "Grid/Type": "PLANE",
+   "Grid/TimeCOAPoly": [
+    [
+     0.0
+    ]
+   ],
+   "Grid/Row/UVectECF": [
+    -0.04239874729812444,
+    -0.995698584857617,
+    -0.08238127420772728
+   ],
+   "Grid/Row/SS": 0.47619041806175594,
+   "Grid/Row/ImpRespWid": 0.5970895433555482,
+   "Grid/Row/Sgn": -1,
+   "Grid/Row/ImpRespBW": 1.6747906760854647,
+   "Grid/Row/KCtr": 0.0,
+   "Grid/Row/DeltaK1": -0.8373953380427324,
+   "Grid/Row/DeltaK2": 0.8373953380427324,
+   "Grid/Row/DeltaKCOAPoly": null,
+   "Grid/Row/WgtType/WindowName": null,
+   "Grid/Col/UVectECF": [
+    0.02642598563688465,
+    0.08130895479106554,
+    -0.9963385574963481
+   ],
+   "Grid/Col/SS": 0.40404035471906563,
+   "Grid/Col/ImpRespWid": 0.5072649147404867,
+   "Grid/Col/Sgn": -1,
+   "Grid/Col/ImpRespBW": 1.9713565258334358,
+   "Grid/Col/KCtr": 0.0,
+   "Grid/Col/DeltaK1": -0.9856782629167179,
+   "Grid/Col/DeltaK2": 0.9856782629167179,
+   "Grid/Col/DeltaKCOAPoly": null,
+   "Grid/Col/WgtType/WindowName": null,
+   "Timeline/CollectStart": "2023-07-30T17:19:40+00:00",
+   "Timeline/CollectDuration": 2.779224,
+   "Position/ARPPoly": [
+    [
+     3186541.28259,
+     5369089.377231,
+     2936306.950161
+    ],
+    [
+     -307.8965804905,
+     -3551.335870701,
+     6803.359023196
+    ],
+    [
+     -2.184044188853,
+     -3.222164986614,
+     -1.78606634493
+    ],
+    [
+     -8.663007437113e-05,
+     0.0008199706599287,
+     -0.001377645964529
+    ],
+    [
+     4.295578979748e-08,
+     3.611337383253e-07,
+     2.168055745528e-07
+    ],
+    [
+     -7.082309122403e-11,
+     -3.162455794443e-11,
+     -2.334487614458e-10
+    ]
+   ],
+   "RadarCollection/TxFrequency/Min": 9477820238.68058,
+   "RadarCollection/TxFrequency/Max": 9722181927.063503,
+   "RadarCollection/TxPolarization": "X",
+   "ImageFormation/TStartProc": 0.0,
+   "ImageFormation/TEndProc": 2.779224,
+   "ImageFormation/TxFrequencyProc/MinProc": 9477820238.68058,
+   "ImageFormation/TxFrequencyProc/MaxProc": 9722181927.063503,
+   "ImageFormation/ImageFormAlgo": "PFA",
+   "ImageFormation/STBeamComp": "NO",
+   "ImageFormation/ImageBeamComp": "NO",
+   "ImageFormation/AzAutofocus": "NO",
+   "ImageFormation/RgAutofocus": "NO",
+   "SCPCOA/SCPTime": 1.394265,
+   "SCPCOA/ARPPos": [
+    3186107.747125,
+    5364131.611456,
+    2945789.161415
+   ],
+   "SCPCOA/ARPVel": [
+    -313.987359,
+    -3560.31619,
+    6798.370491
+   ],
+   "SCPCOA/ARPAcc": [
+    -4.368812,
+    -6.437462,
+    -3.583652
+   ],
+   "SCPCOA/SideOfTrack": "L",
+   "SCPCOA/SlantRange": 646705.35967,
+   "SCPCOA/GroundRange": 361981.456526,
+   "SCPCOA/DopplerConeAng": 67.022773,
+   "SCPCOA/GrazeAng": 52.64881,
+   "SCPCOA/IncidenceAng": 37.35119,
+   "SCPCOA/TwistAng": 38.94584,
+   "SCPCOA/SlopeAng": 61.845271,
+   "SCPCOA/AzimAng": 121.278271,
+   "SCPCOA/LayoverAng": 75.803364,
+   "Radiometric/NoiseLevel/NoiseLevelType": "ABSOLUTE",
+   "Radiometric/RCSSFPoly": [
+    [
+     1.0
+    ]
+   ],
+   "Radiometric/SigmaZeroSFPoly": [
+    [
+     3.153318
+    ]
+   ],
+   "Radiometric/BetaZeroSFPoly": [
+    [
+     5.197501
+    ]
+   ],
+   "Radiometric/GammaZeroSFPoly": [
+    [
+     4.131659
+    ]
+   ],
+   "PFA/FPN": [
+    0.998751260569,
+    -0.04442040992,
+    0.022863654431
+   ],
+   "PFA/IPN": [
+    0.998751227038,
+    -0.044420513092,
+    0.022864918675
+   ],
+   "PFA/PolarAngRefTime": 1.394265248,
+   "PFA/PolarAngPoly": [
+    -2.358708974003e-10,
+    0.01093428646479,
+    4.842693957624e-05,
+    -1.552172242297e-07,
+    -4.242208599552e-09,
+    -1.931164505176e-11
+   ],
+   "PFA/SpatialFreqSFPoly": [
+    1.0,
+    5.170033241784e-15,
+    2.733996857182e-16,
+    4.642995276342e-15,
+    -5.169551036585e-12,
+    -4.606528891437e-14
+   ],
+   "PFA/Krg1": 63.203249605506,
+   "PFA/Krg2": 64.878040281592,
+   "PFA/Kaz1": -0.982913375419,
+   "PFA/Kaz2": 0.988443150414,
+   "PFA/STDeskew/Applied": null,
+   "ImageCorners": [
+    {
+     "index": "1:FRFC",
+     "Lat": 27.162852201857376,
+     "Lon": 56.19000013989484
+    },
+    {
+     "index": "2:FRLC",
+     "Lat": 27.162852201857376,
+     "Lon": 56.230380404711205
+    },
+    {
+     "index": "3:LRLC",
+     "Lat": 27.1269195948789,
+     "Lon": 56.230380404711205
+    },
+    {
+     "index": "4:LRFC",
+     "Lat": 27.1269195948789,
+     "Lon": 56.19000013989484
+    }
+   ],
+   "top_level_blocks": [
+    "CollectionInfo",
+    "ImageCreation",
+    "ImageData",
+    "GeoData",
+    "Grid",
+    "Timeline",
+    "Position",
+    "RadarCollection",
+    "ImageFormation",
+    "SCPCOA",
+    "Radiometric",
+    "PFA"
+   ],
+   "Row/WgtFunct_present": false,
+   "Col/WgtFunct_present": false,
+   "Grid/Row/k=ImpRespWid*ImpRespBW": 1.0,
+   "Grid/Row/SS*ImpRespBW (1/oversample)": 0.7975192722110683,
+   "Grid/Col/k=ImpRespWid*ImpRespBW": 1.0,
+   "Grid/Col/SS*ImpRespBW (1/oversample)": 0.7965075899754863,
+   "mtime": 1788027975.5145018
+  },
+  {
+   "file": "2023-09-11-10-37-05_UMBRA-05_SICDU_X_X.nitf",
+   "size_GB": 0.07097291,
+   "CollectionInfo/CollectorName": "CZTPFA",
+   "CollectionInfo/RadarMode/ModeType": "SPOTLIGHT",
+   "ImageCreation/Application": "diffpfa",
+   "ImageCreation/DateTime": "2026-08-29T18:24:40.600253+00:00",
+   "ImageData/PixelType": "RE32F_IM32F",
+   "ImageData/NumRows": 3168,
+   "ImageData/NumCols": 2800,
+   "ImageData/FirstRow": 0,
+   "ImageData/FirstCol": 0,
+   "ImageData/FullImage/NumRows": 3168,
+   "ImageData/FullImage/NumCols": 2800,
+   "ImageData/SCPPixel/Row": 1584,
+   "ImageData/SCPPixel/Col": 1400,
+   "GeoData/SCP/ECF": [
+    -5912394.53125,
+    1100674.4384765625,
+    -2117715.576171875
+   ],
+   "GeoData/SCP/LLH": [
+    -19.519699769803545,
+    169.4543154329807,
+    172.84671130031347
+   ],
+   "Grid/ImagePlane": "SLANT",
+   "Grid/Type": "PLANE",
+   "Grid/TimeCOAPoly": [
+    [
+     0.0
+    ]
+   ],
+   "Grid/Row/UVectECF": [
+    0.3325523303540823,
+    -0.4752644619515782,
+    0.8145751277702665
+   ],
+   "Grid/Row/SS": 1.2626262626262625,
+   "Grid/Row/ImpRespWid": 1.5802678962366317,
+   "Grid/Row/Sgn": -1,
+   "Grid/Row/ImpRespBW": 0.6328040975719844,
+   "Grid/Row/KCtr": 0.0,
+   "Grid/Row/DeltaK1": -0.3164020487859922,
+   "Grid/Row/DeltaK2": 0.3164020487859922,
+   "Grid/Row/DeltaKCOAPoly": null,
+   "Grid/Row/WgtType/WindowName": null,
+   "Grid/Col/UVectECF": [
+    -0.5651858023754807,
+    0.5910092298063895,
+    0.5755632885068698
+   ],
+   "Grid/Col/SS": 1.4285714285714286,
+   "Grid/Col/ImpRespWid": 1.7922248480872098,
+   "Grid/Col/Sgn": -1,
+   "Grid/Col/ImpRespBW": 0.5579657045081544,
+   "Grid/Col/KCtr": 0.0,
+   "Grid/Col/DeltaK1": -0.2789828522540772,
+   "Grid/Col/DeltaK2": 0.2789828522540772,
+   "Grid/Col/DeltaKCOAPoly": null,
+   "Grid/Col/WgtType/WindowName": null,
+   "Timeline/CollectStart": "2023-09-11T10:37:06+00:00",
+   "Timeline/CollectDuration": 0.988734,
+   "Position/ARPPoly": [
+    [
+     -6165360.106777,
+     1462918.539739,
+     -2743852.075993
+    ],
+    [
+     -2549.216819532,
+     2185.694814449,
+     6901.348752676
+    ],
+    [
+     3.875875096232,
+     -0.6958231839216,
+     1.666599299472
+    ],
+    [
+     0.000486425905517,
+     -0.0006288024653696,
+     -0.001389378367875
+    ],
+    [
+     -3.663495293441e-07,
+     8.287827583578e-08,
+     -3.266957193364e-07
+    ],
+    [
+     -1.943735601755e-08,
+     -1.168647194624e-08,
+     5.625395865881e-08
+    ]
+   ],
+   "RadarCollection/TxFrequency/Min": 9553174284.053967,
+   "RadarCollection/TxFrequency/Max": 9646824241.150171,
+   "RadarCollection/TxPolarization": "X",
+   "ImageFormation/TStartProc": 0.0,
+   "ImageFormation/TEndProc": 0.988734,
+   "ImageFormation/TxFrequencyProc/MinProc": 9553174284.053967,
+   "ImageFormation/TxFrequencyProc/MaxProc": 9646824241.150171,
+   "ImageFormation/ImageFormAlgo": "PFA",
+   "ImageFormation/STBeamComp": "NO",
+   "ImageFormation/ImageBeamComp": "NO",
+   "ImageFormation/AzAutofocus": "NO",
+   "ImageFormation/RgAutofocus": "NO",
+   "SCPCOA/SCPTime": 0.495089,
+   "SCPCOA/ARPPos": [
+    -6166621.245238,
+    1464000.482002,
+    -2740434.88759
+   ],
+   "SCPCOA/ARPVel": [
+    -2545.378658,
+    2185.005364,
+    6902.99796
+   ],
+   "SCPCOA/ARPAcc": [
+    7.753194,
+    -1.393514,
+    3.329071
+   ],
+   "SCPCOA/SideOfTrack": "R",
+   "SCPCOA/SlantRange": 764471.305427,
+   "SCPCOA/GroundRange": 530314.885006,
+   "SCPCOA/DopplerConeAng": 60.853063,
+   "SCPCOA/GrazeAng": 41.475787,
+   "SCPCOA/IncidenceAng": 48.524213,
+   "SCPCOA/TwistAng": -35.336494,
+   "SCPCOA/SlopeAng": 52.323424,
+   "SCPCOA/AzimAng": 212.846068,
+   "SCPCOA/LayoverAng": 259.796232,
+   "Radiometric/NoiseLevel/NoiseLevelType": "ABSOLUTE",
+   "Radiometric/RCSSFPoly": [
+    [
+     1.0
+    ]
+   ],
+   "Radiometric/SigmaZeroSFPoly": [
+    [
+     0.4153763
+    ]
+   ],
+   "Radiometric/BetaZeroSFPoly": [
+    [
+     0.5544
+    ]
+   ],
+   "Radiometric/GammaZeroSFPoly": [
+    [
+     0.367181
+    ]
+   ],
+   "PFA/FPN": [
+    -0.754965080647,
+    -0.651792375846,
+    -0.072072364971
+   ],
+   "PFA/IPN": [
+    -0.754966195514,
+    -0.651791210043,
+    -0.072071229636
+   ],
+   "PFA/PolarAngRefTime": 0.495088741333,
+   "PFA/PolarAngPoly": [
+    2.788028718724e-10,
+    -0.008768259022817,
+    -4.072323140514e-05,
+    -6.663464687112e-09,
+    1.848494608094e-09,
+    1.484169031633e-11
+   ],
+   "PFA/SpatialFreqSFPoly": [
+    1.0,
+    2.130888051359e-13,
+    -9.103106857743e-13,
+    -5.58851219958e-12,
+    -2.416008691279e-12,
+    2.058581827449e-11
+   ],
+   "PFA/Krg1": 63.727599425481,
+   "PFA/Krg2": 64.360403523053,
+   "PFA/Kaz1": -0.279216150722,
+   "PFA/Kaz2": 0.278749553786,
+   "PFA/STDeskew/Applied": null,
+   "ImageCorners": [
+    {
+     "index": "1:FRFC",
+     "Lat": -19.501733464121155,
+     "Lon": 169.43525357895626
+    },
+    {
+     "index": "2:FRLC",
+     "Lat": -19.501733464121155,
+     "Lon": 169.47337728700515
+    },
+    {
+     "index": "3:LRLC",
+     "Lat": -19.537666075485934,
+     "Lon": 169.47337728700515
+    },
+    {
+     "index": "4:LRFC",
+     "Lat": -19.537666075485934,
+     "Lon": 169.43525357895626
+    }
+   ],
+   "top_level_blocks": [
+    "CollectionInfo",
+    "ImageCreation",
+    "ImageData",
+    "GeoData",
+    "Grid",
+    "Timeline",
+    "Position",
+    "RadarCollection",
+    "ImageFormation",
+    "SCPCOA",
+    "Radiometric",
+    "PFA"
+   ],
+   "Row/WgtFunct_present": false,
+   "Col/WgtFunct_present": false,
+   "Grid/Row/k=ImpRespWid*ImpRespBW": 1.0,
+   "Grid/Row/SS*ImpRespBW (1/oversample)": 0.7989950726918995,
+   "Grid/Col/k=ImpRespWid*ImpRespBW": 1.0,
+   "Grid/Col/SS*ImpRespBW (1/oversample)": 0.7970938635830778,
+   "mtime": 1788027885.0212421
+  },
+  {
+   "file": "2023-09-13-21-18-21_UMBRA-06_SICDU_X_X.nitf",
+   "size_GB": 0.089220576,
+   "CollectionInfo/CollectorName": "CZTPFA",
+   "CollectionInfo/RadarMode/ModeType": "SPOTLIGHT",
+   "ImageCreation/Application": "diffpfa",
+   "ImageCreation/DateTime": "2026-08-29T18:26:23.973264+00:00",
+   "ImageData/PixelType": "RE32F_IM32F",
+   "ImageData/NumRows": 3630,
+   "ImageData/NumCols": 3072,
+   "ImageData/FirstRow": 0,
+   "ImageData/FirstCol": 0,
+   "ImageData/FullImage/NumRows": 3630,
+   "ImageData/FullImage/NumCols": 3072,
+   "ImageData/SCPPixel/Row": 1815,
+   "ImageData/SCPPixel/Col": 1536,
+   "GeoData/SCP/ECF": [
+    6181842.7734375,
+    1326637.6953125,
+    -837207.5805664062
+   ],
+   "GeoData/SCP/LLH": [
+    -7.593199990593676,
+    12.112098788066136,
+    12.26123808324337
+   ],
+   "Grid/ImagePlane": "SLANT",
+   "Grid/Type": "PLANE",
+   "Grid/TimeCOAPoly": [
+    [
+     0.0
+    ]
+   ],
+   "Grid/Row/UVectECF": [
+    -0.6178241458370787,
+    -0.7327282450252515,
+    -0.285311485508206
+   ],
+   "Grid/Row/SS": 1.1019283746556474,
+   "Grid/Row/ImpRespWid": 1.3872959541124137,
+   "Grid/Row/Sgn": -1,
+   "Grid/Row/ImpRespBW": 0.7208267255704612,
+   "Grid/Row/KCtr": 0.0,
+   "Grid/Row/DeltaK1": -0.3604133627852306,
+   "Grid/Row/DeltaK2": 0.3604133627852306,
+   "Grid/Row/DeltaKCOAPoly": null,
+   "Grid/Row/WgtType/WindowName": null,
+   "Grid/Col/UVectECF": [
+    0.2764243496719864,
+    0.13729559072131436,
+    -0.9511779537378401
+   ],
+   "Grid/Col/SS": 1.3020833333333333,
+   "Grid/Col/ImpRespWid": 1.6394367056871917,
+   "Grid/Col/Sgn": -1,
+   "Grid/Col/ImpRespBW": 0.6099656037534165,
+   "Grid/Col/KCtr": 0.0,
+   "Grid/Col/DeltaK1": -0.30498280187670823,
+   "Grid/Col/DeltaK2": 0.30498280187670823,
+   "Grid/Col/DeltaKCOAPoly": null,
+   "Grid/Col/WgtType/WindowName": null,
+   "Timeline/CollectStart": "2023-09-13T21:18:22+00:00",
+   "Timeline/CollectDuration": 0.987692,
+   "Position/ARPPoly": [
+    [
+     6622976.795046,
+     1850460.431847,
+     -629839.9562112
+    ],
+    [
+     -254.6802732735,
+     -1609.963443836,
+     -7504.131979922
+    ],
+    [
+     -4.113638408172,
+     -1.098128754931,
+     0.3820346261264
+    ],
+    [
+     4.094451452134e-06,
+     0.0005246989649394,
+     0.001515729102607
+    ],
+    [
+     1.651639355823e-07,
+     8.126156639024e-08,
+     -7.211913094042e-09
+    ],
+    [
+     1.01269361886e-07,
+     9.464546352711e-09,
+     -1.406629462611e-08
+    ]
+   ],
+   "RadarCollection/TxFrequency/Min": 9546580273.658037,
+   "RadarCollection/TxFrequency/Max": 9653416727.08746,
+   "RadarCollection/TxPolarization": "X",
+   "ImageFormation/TStartProc": 0.0,
+   "ImageFormation/TEndProc": 0.987692,
+   "ImageFormation/TxFrequencyProc/MinProc": 9546580273.658037,
+   "ImageFormation/TxFrequencyProc/MaxProc": 9653416727.08746,
+   "ImageFormation/ImageFormAlgo": "PFA",
+   "ImageFormation/STBeamComp": "NO",
+   "ImageFormation/ImageBeamComp": "NO",
+   "ImageFormation/AzAutofocus": "NO",
+   "ImageFormation/RgAutofocus": "NO",
+   "SCPCOA/SCPTime": 0.494452,
+   "SCPCOA/ARPPos": [
+    6622849.862143,
+    1849664.113672,
+    -633550.296253
+   ],
+   "SCPCOA/ARPVel": [
+    -258.748264,
+    -1611.049003,
+    -7503.753073
+   ],
+   "SCPCOA/ARPAcc": [
+    -8.227264,
+    -2.194701,
+    0.768566
+   ],
+   "SCPCOA/SideOfTrack": "R",
+   "SCPCOA/SlantRange": 713806.819836,
+   "SCPCOA/GroundRange": 462116.983886,
+   "SCPCOA/DopplerConeAng": 63.041982,
+   "SCPCOA/GrazeAng": 45.517921,
+   "SCPCOA/IncidenceAng": 44.482079,
+   "SCPCOA/TwistAng": -37.047151,
+   "SCPCOA/SlopeAng": 55.996357,
+   "SCPCOA/AzimAng": 56.870676,
+   "SCPCOA/LayoverAng": 103.484779,
+   "Radiometric/NoiseLevel/NoiseLevelType": "ABSOLUTE",
+   "Radiometric/RCSSFPoly": [
+    [
+     1.0
+    ]
+   ],
+   "Radiometric/SigmaZeroSFPoly": [
+    [
+     0.4883502
+    ]
+   ],
+   "Radiometric/BetaZeroSFPoly": [
+    [
+     0.69696
+    ]
+   ],
+   "Radiometric/GammaZeroSFPoly": [
+    [
+     0.4972598
+    ]
+   ],
+   "PFA/FPN": [
+    0.736126528682,
+    -0.666527963711,
+    0.117720887539
+   ],
+   "PFA/IPN": [
+    0.736126961691,
+    -0.666527748643,
+    0.117719397553
+   ],
+   "PFA/PolarAngRefTime": 0.494452074667,
+   "PFA/PolarAngPoly": [
+    2.651303585508e-10,
+    -0.009588995308796,
+    -4.444927746534e-05,
+    3.556714343856e-08,
+    2.636426676047e-09,
+    1.829345767384e-11
+   ],
+   "PFA/SpatialFreqSFPoly": [
+    0.9999999999999,
+    2.606574802269e-13,
+    1.534363864331e-12,
+    -3.824580241416e-12,
+    -1.05547487098e-11,
+    1.222860220278e-11
+   ],
+   "PFA/Krg1": 63.683525096511,
+   "PFA/Krg2": 64.404351822081,
+   "PFA/Kaz1": -0.305306612974,
+   "PFA/Kaz2": 0.304658990779,
+   "PFA/STDeskew/Applied": null,
+   "ImageCorners": [
+    {
+     "index": "1:FRFC",
+     "Lat": -7.575233684911286,
+     "Lon": 12.093973546303854
+    },
+    {
+     "index": "2:FRLC",
+     "Lat": -7.575233684911286,
+     "Lon": 12.130224029828419
+    },
+    {
+     "index": "3:LRLC",
+     "Lat": -7.611166296276066,
+     "Lon": 12.130224029828419
+    },
+    {
+     "index": "4:LRFC",
+     "Lat": -7.611166296276066,
+     "Lon": 12.093973546303854
+    }
+   ],
+   "top_level_blocks": [
+    "CollectionInfo",
+    "ImageCreation",
+    "ImageData",
+    "GeoData",
+    "Grid",
+    "Timeline",
+    "Position",
+    "RadarCollection",
+    "ImageFormation",
+    "SCPCOA",
+    "Radiometric",
+    "PFA"
+   ],
+   "Row/WgtFunct_present": false,
+   "Col/WgtFunct_present": false,
+   "Grid/Row/k=ImpRespWid*ImpRespBW": 1.0,
+   "Grid/Row/SS*ImpRespBW (1/oversample)": 0.7942994221162107,
+   "Grid/Col/k=ImpRespWid*ImpRespBW": 1.0,
+   "Grid/Col/SS*ImpRespBW (1/oversample)": 0.7942260465539276,
+   "mtime": 1788027985.137905
+  },
+  {
+   "file": "2023-10-04-02-03-26_UMBRA-04_SICDU_X_X.nitf",
+   "size_GB": 0.166021695,
+   "CollectionInfo/CollectorName": "CZTPFA",
+   "CollectionInfo/RadarMode/ModeType": "SPOTLIGHT",
+   "ImageCreation/Application": "diffpfa",
+   "ImageCreation/DateTime": "2026-08-29T18:26:19.171603+00:00",
+   "ImageData/PixelType": "RE32F_IM32F",
+   "ImageData/NumRows": 5500,
+   "ImageData/NumCols": 3773,
+   "ImageData/FirstRow": 0,
+   "ImageData/FirstCol": 0,
+   "ImageData/FullImage/NumRows": 5500,
+   "ImageData/FullImage/NumCols": 3773,
+   "ImageData/SCPPixel/Row": 2750,
+   "ImageData/SCPPixel/Col": 1886,
+   "GeoData/SCP/ECF": [
+    2507068.115234375,
+    -5850408.203125,
+    410226.1047363281
+   ],
+   "GeoData/SCP/LLH": [
+    3.712437949139338,
+    -66.80347536893738,
+    114.0356287797913
+   ],
+   "Grid/ImagePlane": "SLANT",
+   "Grid/Type": "PLANE",
+   "Grid/TimeCOAPoly": [
+    [
+     0.0
+    ]
+   ],
+   "Grid/Row/UVectECF": [
+    -0.049200844520533825,
+    0.9180681891396129,
+    0.39335744176051646
+   ],
+   "Grid/Row/SS": 0.7272727272727273,
+   "Grid/Row/ImpRespWid": 0.9101207983561258,
+   "Grid/Row/Sgn": -1,
+   "Grid/Row/ImpRespBW": 1.098755244145849,
+   "Grid/Row/KCtr": 0.0,
+   "Grid/Row/DeltaK1": -0.5493776220729245,
+   "Grid/Row/DeltaK2": 0.5493776220729245,
+   "Grid/Row/DeltaKCOAPoly": null,
+   "Grid/Row/WgtType/WindowName": null,
+   "Grid/Col/UVectECF": [
+    -0.18419920465142783,
+    -0.3954194081471399,
+    0.899841177467639
+   ],
+   "Grid/Col/SS": 1.0601643254704478,
+   "Grid/Col/ImpRespWid": 1.3325577672478068,
+   "Grid/Col/Sgn": -1,
+   "Grid/Col/ImpRespBW": 0.7504365098297736,
+   "Grid/Col/KCtr": 0.0,
+   "Grid/Col/DeltaK1": -0.3752182549148868,
+   "Grid/Col/DeltaK2": 0.3752182549148868,
+   "Grid/Col/DeltaKCOAPoly": null,
+   "Grid/Col/WgtType/WindowName": null,
+   "Timeline/CollectStart": "2023-10-04T02:03:27+00:00",
+   "Timeline/CollectDuration": 0.991229,
+   "Position/ARPPoly": [
+    [
+     2537984.54047,
+     -6413624.969154,
+     165092.5703749
+    ],
+    [
+     -1456.152434244,
+     -370.4403090793,
+     7534.131146815
+    ],
+    [
+     -1.562631773166,
+     3.986260808018,
+     -0.09963645352193
+    ],
+    [
+     0.0004839882721842,
+     0.0001569376144804,
+     -0.001525966895618
+    ],
+    [
+     7.934392330798e-08,
+     -1.840978484797e-07,
+     -4.583373193109e-09
+    ],
+    [
+     2.992522762565e-08,
+     -8.019293532626e-08,
+     -2.38841828779e-10
+    ]
+   ],
+   "RadarCollection/TxFrequency/Min": 9519545506.68597,
+   "RadarCollection/TxFrequency/Max": 9680478366.091846,
+   "RadarCollection/TxPolarization": "X",
+   "ImageFormation/TStartProc": 0.0,
+   "ImageFormation/TEndProc": 0.991229,
+   "ImageFormation/TxFrequencyProc/MinProc": 9519545506.68597,
+   "ImageFormation/TxFrequencyProc/MaxProc": 9680478366.091846,
+   "ImageFormation/ImageFormAlgo": "PFA",
+   "ImageFormation/STBeamComp": "NO",
+   "ImageFormation/ImageBeamComp": "NO",
+   "ImageFormation/AzAutofocus": "NO",
+   "ImageFormation/RgAutofocus": "NO",
+   "SCPCOA/SCPTime": 0.496166,
+   "SCPCOA/ARPPos": [
+    2537261.662635,
+    -6413807.78765,
+    168830.724732
+   ],
+   "SCPCOA/ARPVel": [
+    -1457.702726,
+    -366.4845,
+    7534.031147
+   ],
+   "SCPCOA/ARPAcc": [
+    -3.123822,
+    7.972988,
+    -0.203816
+   ],
+   "SCPCOA/SideOfTrack": "R",
+   "SCPCOA/SlantRange": 613679.453489,
+   "SCPCOA/GroundRange": 311298.55669,
+   "SCPCOA/DopplerConeAng": 69.433415,
+   "SCPCOA/GrazeAng": 56.714835,
+   "SCPCOA/IncidenceAng": 33.285165,
+   "SCPCOA/TwistAng": -39.428251,
+   "SCPCOA/SlopeAng": 64.918354,
+   "SCPCOA/AzimAng": 215.205264,
+   "SCPCOA/LayoverAng": 259.731406,
+   "Radiometric/NoiseLevel/NoiseLevelType": "ABSOLUTE",
+   "Radiometric/RCSSFPoly": [
+    [
+     1.0
+    ]
+   ],
+   "Radiometric/SigmaZeroSFPoly": [
+    [
+     0.7117847
+    ]
+   ],
+   "Radiometric/BetaZeroSFPoly": [
+    [
+     1.296969
+    ]
+   ],
+   "Radiometric/GammaZeroSFPoly": [
+    [
+     1.0842
+    ]
+   ],
+   "PFA/FPN": [
+    0.98165690167,
+    -0.028182807348,
+    0.188561546379
+   ],
+   "PFA/IPN": [
+    0.981656727122,
+    -0.02818318205,
+    0.188562399076
+   ],
+   "PFA/PolarAngRefTime": 0.496165914667,
+   "PFA/PolarAngPoly": [
+    2.159972578388e-10,
+    -0.01172086532151,
+    -4.929655643564e-05,
+    2.51817133548e-07,
+    5.231184172838e-09,
+    1.493465535326e-11
+   ],
+   "PFA/SpatialFreqSFPoly": [
+    1.0,
+    4.330341614911e-16,
+    1.703851960187e-15,
+    -1.330103103454e-14,
+    -3.690394092192e-12,
+    3.19256877258e-14
+   ],
+   "PFA/Krg1": 63.494471525561,
+   "PFA/Krg2": 64.593226769707,
+   "PFA/Kaz1": -0.375582947401,
+   "PFA/Kaz2": 0.374853562429,
+   "PFA/STDeskew/Applied": null,
+   "ImageCorners": [
+    {
+     "index": "1:FRFC",
+     "Lat": 3.730404254821728,
+     "Lon": -66.82147945464743
+    },
+    {
+     "index": "2:FRLC",
+     "Lat": 3.730404254821728,
+     "Lon": -66.78547128322734
+    },
+    {
+     "index": "3:LRLC",
+     "Lat": 3.6944716434569473,
+     "Lon": -66.78547128322734
+    },
+    {
+     "index": "4:LRFC",
+     "Lat": 3.6944716434569473,
+     "Lon": -66.82147945464743
+    }
+   ],
+   "top_level_blocks": [
+    "CollectionInfo",
+    "ImageCreation",
+    "ImageData",
+    "GeoData",
+    "Grid",
+    "Timeline",
+    "Position",
+    "RadarCollection",
+    "ImageFormation",
+    "SCPCOA",
+    "Radiometric",
+    "PFA"
+   ],
+   "Row/WgtFunct_present": false,
+   "Col/WgtFunct_present": false,
+   "Grid/Row/k=ImpRespWid*ImpRespBW": 1.0,
+   "Grid/Row/SS*ImpRespBW (1/oversample)": 0.7990947230151629,
+   "Grid/Col/k=ImpRespWid*ImpRespBW": 1.0,
+   "Grid/Col/SS*ImpRespBW (1/oversample)": 0.795586016252079,
+   "mtime": 1788027981.8350515
+  },
+  {
+   "file": "2023-11-14-03-38-20_UMBRA-04_SICDU_X_X.nitf",
+   "size_GB": 0.57154569,
+   "CollectionInfo/CollectorName": "CZTPFA",
+   "CollectionInfo/RadarMode/ModeType": "SPOTLIGHT",
+   "ImageCreation/Application": "diffpfa",
+   "ImageCreation/DateTime": "2026-08-29T18:33:01.081948+00:00",
+   "ImageData/PixelType": "RE32F_IM32F",
+   "ImageData/NumRows": 9800,
+   "ImageData/NumCols": 7290,
+   "ImageData/FirstRow": 0,
+   "ImageData/FirstCol": 0,
+   "ImageData/FullImage/NumRows": 9800,
+   "ImageData/FullImage/NumCols": 7290,
+   "ImageData/SCPPixel/Row": 4900,
+   "ImageData/SCPPixel/Col": 3645,
+   "GeoData/SCP/ECF": [
+    -546747.4365234375,
+    -4322648.4375,
+    4642683.59375
+   ],
+   "GeoData/SCP/LLH": [
+    47.00957659518566,
+    -97.20874033391661,
+    263.5631476051858
+   ],
+   "Grid/ImagePlane": "SLANT",
+   "Grid/Type": "PLANE",
+   "Grid/TimeCOAPoly": [
+    [
+     0.0
+    ]
+   ],
+   "Grid/Row/UVectECF": [
+    0.40596745642725457,
+    0.8701321274476098,
+    -0.27939310139207374
+   ],
+   "Grid/Row/SS": 0.40816326530612246,
+   "Grid/Row/ImpRespWid": 0.5131297321149483,
+   "Grid/Row/Sgn": -1,
+   "Grid/Row/ImpRespBW": 1.9488249021905943,
+   "Grid/Row/KCtr": 0.0,
+   "Grid/Row/DeltaK1": -0.9744124510952972,
+   "Grid/Row/DeltaK2": 0.9744124510952972,
+   "Grid/Row/DeltaKCOAPoly": null,
+   "Grid/Row/WgtType/WindowName": null,
+   "Grid/Col/UVectECF": [
+    -0.28796739635156804,
+    0.4119417195670502,
+    0.8645107277059322
+   ],
+   "Grid/Col/SS": 0.5486968449931413,
+   "Grid/Col/ImpRespWid": 0.6870971109852914,
+   "Grid/Col/Sgn": -1,
+   "Grid/Col/ImpRespBW": 1.4553983476455148,
+   "Grid/Col/KCtr": 0.0,
+   "Grid/Col/DeltaK1": -0.7276991738227574,
+   "Grid/Col/DeltaK2": 0.7276991738227574,
+   "Grid/Col/DeltaKCOAPoly": null,
+   "Grid/Col/WgtType/WindowName": null,
+   "Timeline/CollectStart": "2023-11-14T03:38:21+00:00",
+   "Timeline/CollectDuration": 1.908511,
+   "Position/ARPPoly": [
+    [
+     -792297.7075044,
+     -4855956.33127,
+     4807135.843999
+    ],
+    [
+     -874.3085332532,
+     5450.32524111,
+     5349.688217339
+    ],
+    [
+     0.8793881940512,
+     3.018939872997,
+     -2.94513573707
+    ],
+    [
+     0.0003230349536298,
+     -0.001147827864322,
+     -0.001086108428231
+    ],
+    [
+     -1.284525720805e-07,
+     -3.117874027324e-07,
+     2.863180919646e-07
+    ],
+    [
+     -2.515540614983e-10,
+     -1.278904627202e-09,
+     1.730614329757e-09
+    ]
+   ],
+   "RadarCollection/TxFrequency/Min": 9455662538.64672,
+   "RadarCollection/TxFrequency/Max": 9744347622.036003,
+   "RadarCollection/TxPolarization": "X",
+   "ImageFormation/TStartProc": 0.0,
+   "ImageFormation/TEndProc": 1.908511,
+   "ImageFormation/TxFrequencyProc/MinProc": 9455662538.64672,
+   "ImageFormation/TxFrequencyProc/MaxProc": 9744347622.036003,
+   "ImageFormation/ImageFormAlgo": "PFA",
+   "ImageFormation/STBeamComp": "NO",
+   "ImageFormation/ImageBeamComp": "NO",
+   "ImageFormation/AzAutofocus": "NO",
+   "ImageFormation/RgAutofocus": "NO",
+   "SCPCOA/SCPTime": 0.956491,
+   "SCPCOA/ARPPos": [
+    -793133.171133,
+    -4850740.382045,
+    4812250.078461
+   ],
+   "SCPCOA/ARPVel": [
+    -872.625393,
+    5456.097269,
+    5344.051244
+   ],
+   "SCPCOA/ARPAcc": [
+    1.760629,
+    6.031289,
+    -5.896501
+   ],
+   "SCPCOA/SideOfTrack": "R",
+   "SCPCOA/SlantRange": 606910.063229,
+   "SCPCOA/GroundRange": 314014.388697,
+   "SCPCOA/DopplerConeAng": 67.834372,
+   "SCPCOA/GrazeAng": 55.866865,
+   "SCPCOA/IncidenceAng": 34.133135,
+   "SCPCOA/TwistAng": -42.39526,
+   "SCPCOA/SlopeAng": 65.518984,
+   "SCPCOA/AzimAng": 211.546372,
+   "SCPCOA/LayoverAng": 259.349751,
+   "Radiometric/NoiseLevel/NoiseLevelType": "ABSOLUTE",
+   "Radiometric/RCSSFPoly": [
+    [
+     1.0
+    ]
+   ],
+   "Radiometric/SigmaZeroSFPoly": [
+    [
+     2.505461
+    ]
+   ],
+   "Radiometric/BetaZeroSFPoly": [
+    [
+     4.465125
+    ]
+   ],
+   "Radiometric/GammaZeroSFPoly": [
+    [
+     3.695945
+    ]
+   ],
+   "PFA/FPN": [
+    0.867332443627,
+    -0.270507418058,
+    0.417803983955
+   ],
+   "PFA/IPN": [
+    0.867332233323,
+    -0.270507117214,
+    0.417804615312
+   ],
+   "PFA/PolarAngRefTime": 0.956491226667,
+   "PFA/PolarAngPoly": [
+    2.297183554121e-10,
+    -0.01172969738714,
+    -5.34810239373e-05,
+    2.113199464659e-07,
+    5.472332100057e-09,
+    2.307798382717e-11
+   ],
+   "PFA/SpatialFreqSFPoly": [
+    1.0,
+    -3.495883879633e-16,
+    -1.006227273499e-15,
+    1.45899891937e-15,
+    -2.237916033128e-12,
+    -2.277779677732e-14
+   ],
+   "PFA/Krg1": 63.06794419944,
+   "PFA/Krg2": 65.01676910163,
+   "PFA/Kaz1": -0.72916027836,
+   "PFA/Kaz2": 0.726238069286,
+   "PFA/STDeskew/Applied": null,
+   "ImageCorners": [
+    {
+     "index": "1:FRFC",
+     "Lat": 47.027542900868056,
+     "Lon": -97.23508867700151
+    },
+    {
+     "index": "2:FRLC",
+     "Lat": 47.027542900868056,
+     "Lon": -97.1823919908317
+    },
+    {
+     "index": "3:LRLC",
+     "Lat": 46.99161028950327,
+     "Lon": -97.1823919908317
+    },
+    {
+     "index": "4:LRFC",
+     "Lat": 46.99161028950327,
+     "Lon": -97.23508867700151
+    }
+   ],
+   "top_level_blocks": [
+    "CollectionInfo",
+    "ImageCreation",
+    "ImageData",
+    "GeoData",
+    "Grid",
+    "Timeline",
+    "Position",
+    "RadarCollection",
+    "ImageFormation",
+    "SCPCOA",
+    "Radiometric",
+    "PFA"
+   ],
+   "Row/WgtFunct_present": false,
+   "Col/WgtFunct_present": false,
+   "Grid/Row/k=ImpRespWid*ImpRespBW": 1.0,
+   "Grid/Row/SS*ImpRespBW (1/oversample)": 0.7954387355879977,
+   "Grid/Col/k=ImpRespWid*ImpRespBW": 0.9999999999999999,
+   "Grid/Col/SS*ImpRespBW (1/oversample)": 0.798572481561325,
+   "mtime": 1788028429.9069865
+  },
+  {
+   "file": "2025-10-26-05-00-15_UMBRA-08_SICDU_V_V.nitf",
+   "size_GB": 0.508041698,
+   "CollectionInfo/CollectorName": "CZTPFA",
+   "CollectionInfo/RadarMode/ModeType": "SPOTLIGHT",
+   "ImageCreation/Application": "diffpfa",
+   "ImageCreation/DateTime": "2026-08-29T18:27:56.725416+00:00",
+   "ImageData/PixelType": "RE32F_IM32F",
+   "ImageData/NumRows": 9450,
+   "ImageData/NumCols": 6720,
+   "ImageData/FirstRow": 0,
+   "ImageData/FirstCol": 0,
+   "ImageData/FullImage/NumRows": 9450,
+   "ImageData/FullImage/NumCols": 6720,
+   "ImageData/SCPPixel/Row": 4725,
+   "ImageData/SCPPixel/Col": 3360,
+   "GeoData/SCP/ECF": [
+    -519084.3505859375,
+    -4334657.2265625,
+    4634686.5234375
+   ],
+   "GeoData/SCP/LLH": [
+    46.904348068203355,
+    -96.82877159269106,
+    246.95744863152504
+   ],
+   "Grid/ImagePlane": "SLANT",
+   "Grid/Type": "PLANE",
+   "Grid/TimeCOAPoly": [
+    [
+     0.0
+    ]
+   ],
+   "Grid/Row/UVectECF": [
+    0.7277536149001921,
+    0.6023101555056901,
+    -0.32802004904336873
+   ],
+   "Grid/Row/SS": 0.5291005291005291,
+   "Grid/Row/ImpRespWid": 0.6636265777649712,
+   "Grid/Row/Sgn": -1,
+   "Grid/Row/ImpRespBW": 1.5068715351454145,
+   "Grid/Row/KCtr": 0.0,
+   "Grid/Row/DeltaK1": -0.7534357675727072,
+   "Grid/Row/DeltaK2": 0.7534357675727072,
+   "Grid/Row/DeltaKCOAPoly": null,
+   "Grid/Row/WgtType/WindowName": null,
+   "Grid/Col/UVectECF": [
+    -0.1968850704886049,
+    0.6416182429373535,
+    0.7413246922561533
+   ],
+   "Grid/Col/SS": 0.7440476190476191,
+   "Grid/Col/ImpRespWid": 0.9369499538624579,
+   "Grid/Col/Sgn": -1,
+   "Grid/Col/ImpRespBW": 1.0672928643388329,
+   "Grid/Col/KCtr": 0.0,
+   "Grid/Col/DeltaK1": -0.5336464321694164,
+   "Grid/Col/DeltaK2": 0.5336464321694164,
+   "Grid/Col/DeltaKCOAPoly": null,
+   "Grid/Col/WgtType/WindowName": null,
+   "Timeline/CollectStart": "2025-10-26T05:00:15+00:00",
+   "Timeline/CollectDuration": 1.222705,
+   "Position/ARPPoly": [
+    [
+     -931807.730086,
+     -4680504.238084,
+     4817251.617706
+    ],
+    [
+     -668.969656945,
+     5599.146738624,
+     5298.171099742
+    ],
+    [
+     0.9999704608524,
+     3.022417914729,
+     -3.080398400293
+    ],
+    [
+     0.0002878069358593,
+     -0.00123516832972,
+     -0.001124718313412
+    ],
+    [
+     -1.449148031838e-07,
+     -3.55045248326e-07,
+     2.661577428219e-07
+    ],
+    [
+     3.685129294341e-10,
+     7.508861274117e-10,
+     5.919355951039e-09
+    ]
+   ],
+   "RadarCollection/TxFrequency/Min": 9487378595.396875,
+   "RadarCollection/TxFrequency/Max": 9712619489.058851,
+   "RadarCollection/TxPolarization": "V",
+   "ImageFormation/TStartProc": 0.0,
+   "ImageFormation/TEndProc": 1.222705,
+   "ImageFormation/TxFrequencyProc/MinProc": 9487378595.396875,
+   "ImageFormation/TxFrequencyProc/MaxProc": 9712619489.058851,
+   "ImageFormation/ImageFormAlgo": "PFA",
+   "ImageFormation/STBeamComp": "NO",
+   "ImageFormation/ImageBeamComp": "NO",
+   "ImageFormation/AzAutofocus": "NO",
+   "ImageFormation/RgAutofocus": "NO",
+   "SCPCOA/SCPTime": 0.611744,
+   "SCPCOA/ARPPos": [
+    -932216.593996,
+    -4677077.862683,
+    4820491.589219
+   ],
+   "SCPCOA/ARPVel": [
+    -667.745882,
+    5602.843244,
+    5294.401007
+   ],
+   "SCPCOA/ARPAcc": [
+    2.000997,
+    6.040301,
+    -6.164924
+   ],
+   "SCPCOA/SideOfTrack": "R",
+   "SCPCOA/SlantRange": 567850.037471,
+   "SCPCOA/GroundRange": 376750.282747,
+   "SCPCOA/DopplerConeAng": 81.374696,
+   "SCPCOA/GrazeAng": 44.999523,
+   "SCPCOA/IncidenceAng": 45.000477,
+   "SCPCOA/TwistAng": -10.007272,
+   "SCPCOA/SlopeAng": 45.864753,
+   "SCPCOA/AzimAng": 246.953593,
+   "SCPCOA/LayoverAng": 260.965629,
+   "Radiometric/NoiseLevel/NoiseLevelType": "ABSOLUTE",
+   "Radiometric/RCSSFPoly": [
+    [
+     1.0
+    ]
+   ],
+   "Radiometric/SigmaZeroSFPoly": [
+    [
+     1.796179
+    ]
+   ],
+   "Radiometric/BetaZeroSFPoly": [
+    [
+     2.54016
+    ]
+   ],
+   "Radiometric/GammaZeroSFPoly": [
+    [
+     1.796149
+    ]
+   ],
+   "PFA/FPN": [
+    0.656982112568,
+    -0.474955472951,
+    0.585484246142
+   ],
+   "PFA/IPN": [
+    0.656971038188,
+    -0.474919474127,
+    0.585525873106
+   ],
+   "PFA/PolarAngRefTime": 0.611744032,
+   "PFA/PolarAngPoly": [
+    0.001095135865472,
+    -0.01347179556691,
+    -2.656426643563e-05,
+    6.792711602926e-07,
+    4.380954613431e-09,
+    -5.63348208984e-11
+   ],
+   "PFA/SpatialFreqSFPoly": [
+    1.0,
+    2.159941509915e-14,
+    -4.095967694452e-13,
+    3.366395032436e-12,
+    -1.031922545559e-11,
+    -6.43115925712e-14
+   ],
+   "PFA/Krg1": 63.28946376796,
+   "PFA/Krg2": 64.796335303106,
+   "PFA/Kaz1": -0.462989596434,
+   "PFA/Kaz2": 0.604303267905,
+   "PFA/STDeskew/Applied": null,
+   "ImageCorners": [
+    {
+     "index": "1:FRFC",
+     "Lat": 46.926805950306345,
+     "Lon": -96.86164231658006
+    },
+    {
+     "index": "2:FRLC",
+     "Lat": 46.926805950306345,
+     "Lon": -96.79590086880205
+    },
+    {
+     "index": "3:LRLC",
+     "Lat": 46.881890186100364,
+     "Lon": -96.79590086880205
+    },
+    {
+     "index": "4:LRFC",
+     "Lat": 46.881890186100364,
+     "Lon": -96.86164231658006
+    }
+   ],
+   "top_level_blocks": [
+    "CollectionInfo",
+    "ImageCreation",
+    "ImageData",
+    "GeoData",
+    "Grid",
+    "Timeline",
+    "Position",
+    "RadarCollection",
+    "ImageFormation",
+    "SCPCOA",
+    "Radiometric",
+    "PFA"
+   ],
+   "Row/WgtFunct_present": false,
+   "Col/WgtFunct_present": false,
+   "Grid/Row/k=ImpRespWid*ImpRespBW": 1.0,
+   "Grid/Row/SS*ImpRespBW (1/oversample)": 0.7972865265319653,
+   "Grid/Col/k=ImpRespWid*ImpRespBW": 1.0,
+   "Grid/Col/SS*ImpRespBW (1/oversample)": 0.7941167145378221,
+   "mtime": 1788028336.8672876
+  }
+ ]
+}

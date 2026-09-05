@@ -14,7 +14,6 @@ def _compute_look_vectors(pvp: Dict[str, np.ndarray], device: torch.device = tor
     tx        = torch.as_tensor(pvp["TxPos"], dtype=torch.float64, device=device)
     phse_cntr = 0.5 * (tx + rcv)    # Bistatic / APC midpoint
     P_vecs    = srp - phse_cntr     # Vector from phase center to SRP
-    #P_vecs    = phse_cntr - srp
     return P_vecs
 
 def _compute_look_components(
@@ -56,8 +55,6 @@ def _compute_fasttime_frequencies(
     Calculates fast-time RF frequencies F(n, k) in Hz for each pulse n and sample k.
     Returns tensor of shape (N_pulses, N_samples).
     """
-    num_pulses = len(pvp["SC0"]) if "SC0" in pvp else len(pvp["FX1"])
-
     if domain_type == "FX":
         sc0    = torch.as_tensor(pvp["SC0"], dtype=torch.float64, device=device)
         scss   = torch.as_tensor(pvp["SCSS"], dtype=torch.float64, device=device)

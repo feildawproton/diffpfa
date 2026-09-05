@@ -1,5 +1,4 @@
 import math
-import numpy as np
 import torch
 
 def czt_1d_torch(
@@ -35,13 +34,20 @@ def czt_1d_torch(
     dr = (r_max - r_min) / max(M - 1, 1)
 
     device = x.device
-    real_dtype = torch.float64 if x.dtype in (torch.float64, torch.complex128) else torch.float32
-    complex_dtype = torch.complex128 if real_dtype == torch.float64 else torch.complex64
 
-    x_cplx = x.to(complex_dtype)
+    # -- NOTE (Audit C9 / F13 Remediated): Pin Float64 Precision in CZT --
+    # Pre- and post-chirp phases evaluate 2*pi*r_min*k where r_min ~ -L/2 ~ -2500m
+    # and k ~ 64 cyc/m, resulting in absolute phases around ~1e6 rad.
+    # Evaluating phases in float32 limits precision to ~0.06 rad (~3.4 degrees) of
+    # random phase noise per sample, destroying SNR by -21 dB.
+    # Therefore, chirp phases and Bluestein convolution are always computed in float64/complex128.
+    calc_real_dtype = torch.float64
+    calc_cplx_dtype = torch.complex128
 
-    n = torch.arange(N, dtype=real_dtype, device=device)
-    m = torch.arange(M, dtype=real_dtype, device=device)
+    x_cplx = x.to(calc_cplx_dtype)
+
+    n = torch.arange(N, dtype=calc_real_dtype, device=device)
+    m = torch.arange(M, dtype=calc_real_dtype, device=device)
 
     # Reshape n and m to align with target dimension `dim`
     shape_n = [1] * x.ndim
@@ -52,9 +58,9 @@ def czt_1d_torch(
     shape_m[dim] = M
     m_exp = m.view(*shape_m)
 
-    # Expand k_start and k_step to broadcast with n_exp
-    k_start_exp = k_start
-    k_step_exp = k_step
+    # Expand k_start and k_step to broadcast with n_exp in float64
+    k_start_exp = k_start.to(calc_real_dtype) if isinstance(k_start, torch.Tensor) else k_start
+    k_step_exp = k_step.to(calc_real_dtype) if isinstance(k_step, torch.Tensor) else k_step
 
     pi = math.pi
     two_pi = 2.0 * pi
@@ -81,12 +87,12 @@ def czt_1d_torch(
     
     # Evaluate phase for v: phase_v(l) = -pi * dr * k_step * l^2
     # We construct l in [0, M) and [L-N+1, L) like standard CZT.
-    l_idx = torch.zeros(L, dtype=real_dtype, device=device)
+    l_idx = torch.zeros(L, dtype=calc_real_dtype, device=device)
     if M > 0:
-        l_idx[:M] = torch.arange(M, dtype=real_dtype, device=device)
+        l_idx[:M] = torch.arange(M, dtype=calc_real_dtype, device=device)
     if N > 1:
         # For l in [-N+1, -1] -> mapped to L-N+1 to L-1
-        l_idx[L - N + 1:] = torch.arange(1, N, dtype=real_dtype, device=device).flip(0)
+        l_idx[L - N + 1:] = torch.arange(1, N, dtype=calc_real_dtype, device=device).flip(0)
 
     # Reshape l_idx to align with dim
     shape_l = [1] * x.ndim
@@ -112,7 +118,7 @@ def czt_1d_torch(
     phase_m = two_pi * k_start_exp * m_exp * dr + pi * dr * k_step_exp * (m_exp**2)
     post_chirp = torch.exp(torch.complex(torch.zeros_like(phase_m), phase_m))
 
-    output = conv_m * post_chirp
+    output = (conv_m * post_chirp).to(x.dtype if x.is_complex() else calc_cplx_dtype)
     return output
 
 def czt_resample_kspace_1d(
@@ -184,9 +190,24 @@ def czt_resample_kspace_1d(
             dim=-1
         )
         
+        # -- NOTE (Audit C7 Remediated): CZT Resampler Normalization --
+        # Previously, the resampled signal was normalized as:
+        #   torch.conj(k_cart_b) / float(N_spatial)
+        # However, the forward CZT sums over N_spatial discrete samples with spacing
+        # r_step = spatial_extent / (N_spatial - 1), while the inverse CZT sums over
+        # the input k-samples without multiplying by the measure |k_step|.
+        # Dividing by N_spatial yielded an overall gain of 1 / (L * |k_step|), which caused
+        # sub-bands with different sample spacing (e.g. SCSS) to be weighted inversely
+        # to their sample spacing (a 2x denser subband received 2x the weight).
+        # Multiplying by |k_step| * r_step weights the continuous integral appropriately:
+        k_step_val = torch.abs(k_step_b) if isinstance(k_step_b, torch.Tensor) else abs(k_step_b)
+        weight = k_step_val * r_step_t
+        while isinstance(weight, torch.Tensor) and weight.ndim < k_cart_b.ndim:
+            weight = weight.unsqueeze(-1)
+
         if signal.ndim > 1:
-            k_cart[b:b_end] = torch.conj(k_cart_b) / float(N_spatial)
+            k_cart[b:b_end] = (torch.conj(k_cart_b) * weight).to(k_cart.dtype)
         else:
-            k_cart = torch.conj(k_cart_b) / float(N_spatial)
+            k_cart = (torch.conj(k_cart_b) * weight).to(k_cart.dtype)
     
     return k_cart

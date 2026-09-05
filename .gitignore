@@ -22,13 +22,15 @@ mypyenv/
 *.nitf
 *.cphd
 *.png
+*.npy
+*.pkl
 output/
 simulation/output/
 workspace/
+audit/**/out/
 
 # Private
 PI/
-audit/
 
 # package stuff
 *.egg-info*

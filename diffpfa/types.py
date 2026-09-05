@@ -33,3 +33,5 @@ class CPHDMetadata:
     line_spacing: Optional[float]
     sample_spacing: Optional[float]
     raw_meta: ET.Element
+    ref_uIAX: Optional[np.ndarray] = None
+    ref_uIAY: Optional[np.ndarray] = None

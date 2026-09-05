@@ -1,34 +1,19 @@
-from typing import Dict, Tuple, Optional, Union
-import numpy as np
 import torch
-from scipy.fft import next_fast_len
-import math
-
 from diffpfa.IFA.channel.czt_torch import czt_resample_kspace_1d
 from diffpfa.IFA.channel.nufft_torch import nufft_grid_1d
 
-from diffpfa.constants import SPEED_OF_LIGHT
-from diffpfa.types import CPHDMetadata
-
-def _deskew_rvp(signal: torch.Tensor, fxc: float, pvp: dict, N_samples: int, device: str) -> torch.Tensor:
-    """
-    remove residual video phase (RVP) caused by stretch processing (deramping)
-    phase_rvp = pi*(F^2 / gamma)
-    gamma is the chirp rate
-    """
-    if "TxFMRate" in pvp:
-        gamma = torch.as_tensor(pvp["TxFMRate"], dtype=torch.float64, device=device)
-        # only move forward if we truly are stretch processing gamma > 0
-        if torch.any(torch.abs(gamma) > 1e-12) and "SC0" in pvp and "SCSS" in pvp:
-            sc0 = torch.as_tensor(pvp["SC0"], dtype=torch.float64, device=device)
-            scss = torch.as_tensor(pvp["SCSS"], dtype=torch.float64, device=device)
-            k_idx = torch.arange(N_samples, dtype=torch.float64, device=device)
-            F_hz = sc0.unsqueeze(1) + scss.unsqueeze(1) * k_idx.unsqueeze(0)
-            F_v = F_hz - fxc
-            rvp_phase = torch.pi * (F_v ** 2) / gamma.unsqueeze(1)
-            rvp_term = torch.exp(torch.complex(torch.zeros_like(rvp_phase), rvp_phase))
-            signal = signal * rvp_term.to(signal.dtype)
-    return signal
+# -- NOTE (Audit C9 / F11 Remediated): RVP Deskew Removed --
+# Previously, a residual video phase (RVP) deskew function was defined here:
+#   if "TxFMRate" in pvp:
+#       rvp_phase = pi * (F_v ** 2) / gamma
+#       signal = signal * exp(j * rvp_phase)
+# This was an error in understanding the CPHD data standard:
+# 1. Per CPHD DIDD §1.4 and §4, CPHD phase history data in the FX domain is already
+#    deskewed and SRP-referenced by the producer before writing.
+# 2. 'TxFMRate' is not a defined CPHD 1.x Per-Vector Parameter (PVP).
+# 3. If triggered with synthetic chirp rates, applying an additional quadratic phase
+#    distorts range focus and induces target localization shifts (~0.8 m in audit a05).
+# Therefore, RVP deskew has been completely removed.
 
 def process_cztnufft(
     signal: torch.Tensor,
@@ -47,8 +32,6 @@ def process_cztnufft(
 ) -> torch.Tensor:
 
     N_samples = signal.shape[-1]
-    
-    signal = _deskew_rvp(signal, fxc, pvp, N_samples, device)
     
     dK_u = 1 / L_u
     dK_r = 1 / L_r

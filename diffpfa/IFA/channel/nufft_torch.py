@@ -1,6 +1,5 @@
 import math
 from typing import Tuple, Union
-import numpy as np
 import torch
 from scipy.fft import next_fast_len
 

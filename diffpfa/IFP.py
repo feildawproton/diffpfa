@@ -2,32 +2,19 @@ import os
 import numpy as np
 import lxml.etree as ET
 import datetime
-from typing import List, Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional
 import sarkit.cphd as skcphd
 import sarkit.sicd as sksicd
+import sarkit.wgs84 as wgs84
+import numpy.polynomial.polynomial as npp
 from pathlib import Path
 import concurrent.futures
 import time
 
 from diffpfa.types import CPHDMetadata, ImageAreaBounds
 from diffpfa.IFA.PFA import pfa_per_polar
-
-def _cartesian_to_geodetic(x: np.ndarray) -> np.ndarray:
-    a = 6378137.0
-    f = 1 / 298.257223563
-    b = a * (1 - f)
-    e2 = 1 - (b**2) / (a**2)
-    ep2 = (a**2 - b**2) / (b**2)
-    p = np.sqrt(x[0]**2 + x[1]**2)
-    th = np.arctan2(a * x[2], b * p)
-    lon = np.arctan2(x[1], x[0])
-    lat = np.arctan2((x[2] + ep2 * b * np.sin(th)**3), (p - e2 * a * np.cos(th)**3))
-    n = a / np.sqrt(1 - e2 * np.sin(lat)**2)
-    if np.abs(lat) < np.pi / 4:
-        alt = p / np.cos(lat) - n
-    else:
-        alt = x[2] / np.sin(lat) - n + e2 * n
-    return np.array([lat, lon, alt])
+from diffpfa.IFA.kspace import compute_kspace
+from diffpfa.constants import SPEED_OF_LIGHT
 
 def _read_single_channel(cphd_path: str, ch_id: str, fxc: float, domain_type: str):
     """Worker function to read a single channel in its own thread/file handle."""
@@ -60,6 +47,7 @@ class IFAProcessor:
                  image_plane: str = "SLANT", 
                  image_oversample: float = 1.25, 
                  batch_size: int = 256,
+                 pad_factor: float = 1.20,
                  device: str = "cuda"):
         self.cphd_path = cphd_path
         self.output_dir = output_dir
@@ -67,7 +55,8 @@ class IFAProcessor:
         self.custom_pixel_spacing = custom_pixel_spacing
         self.image_plane = image_plane
         self.image_oversample = image_oversample
-        self.batch_size=batch_size
+        self.batch_size = batch_size
+        self.pad_factor = pad_factor
         self.device = device
         
     def _read_metadata(self, reader) -> CPHDMetadata:
@@ -128,21 +117,88 @@ class IFAProcessor:
             line_spacing=line_spacing,
             sample_spacing=sample_spacing,
             raw_meta=xmltree,
+            ref_uIAX=uIAX.copy() if uIAX is not None else None,
+            ref_uIAY=uIAY.copy() if uIAY is not None else None,
         )
 
     def _determine_spatial_bounds(self, cphd_meta):
-        mode = self.image_area_mode
-        if mode == "ImageArea" and cphd_meta.image_area is not None:
-            ia = cphd_meta.image_area
+        """
+        Determines the spatial extent [u_min, u_max] x [r_min, r_max] in meters.
+
+        NOTE ON RADAR RECTIFICATION (Audit Defect C3):
+        Previously, this method set:
             u_min, u_max = min(ia.x1, ia.x2), max(ia.x1, ia.x2)
             r_min, r_max = min(ia.y1, ia.y2), max(ia.y1, ia.y2)
-        elif mode == "ExtendedArea" and cphd_meta.extended_area is not None:
-            ea = cphd_meta.extended_area
-            u_min, u_max = min(ea.x1, ea.x2), max(ea.x1, ea.x2)
-            r_min, r_max = min(ea.y1, ea.y2), max(ea.y1, ea.y2)
+        directly for both GROUND and SLANT modes.
+        This was a fundamental error in radar geometry understanding:
+        ImageArea/X1Y1, X2Y2 in CPHD DIDD §6.2 are defined on the CPHD ReferenceSurface
+        (ground plane spanned by ref_uIAX and ref_uIAY) relative to IARP.
+        Using those ground extents directly as slant-plane extents caused a ~1.41x
+        over-coverage in slant range (failing to account for the grazing/depression angle)
+        and clipped azimuth by ~5% (because ground reference axes uIAX/uIAY are not aligned
+        with the slant plane velocity/cross-range axis).
+        
+        To rectify this:
+        When image_plane == 'SLANT':
+            Project the 4 ground corners of the ImageArea onto the slant plane basis vectors:
+                u_row = LOS unit vector (from ARP to SRP)
+                u_col = cross-range unit vector (perpendicular to LOS along velocity)
+            Then apply pad_factor (default 1.20) around the bounding box center to reproduce
+            the standard slant over-formation extents.
+        When image_plane == 'GROUND':
+            The bounds along ref_uIAX and ref_uIAY are used directly without projection.
+        """
+        mode = self.image_area_mode
+        area = cphd_meta.image_area if mode == "ImageArea" else cphd_meta.extended_area
+        if area is None:
+            return -100.0, 100.0, -100.0, 100.0
+
+        x1, y1 = min(area.x1, area.x2), min(area.y1, area.y2)
+        x2, y2 = max(area.x1, area.x2), max(area.y1, area.y2)
+
+        if self.image_plane.upper() == "SLANT":
+            # In SLANT mode, run() sets cphd_meta.uIAX = u_col and cphd_meta.uIAY = u_row
+            u_col = cphd_meta.uIAX
+            u_row = cphd_meta.uIAY
+
+            # Original CPHD ground reference surface vectors
+            ref_uIAX = cphd_meta.ref_uIAX if cphd_meta.ref_uIAX is not None else u_col
+            ref_uIAY = cphd_meta.ref_uIAY if cphd_meta.ref_uIAY is not None else u_row
+
+            # IARP offset relative to SRP (in ECF)
+            iarp_offset = (cphd_meta.iarp_ecf - cphd_meta.srp_ecf) if (
+                cphd_meta.iarp_ecf is not None and cphd_meta.srp_ecf is not None
+            ) else np.zeros(3)
+
+            ground_corners = [
+                np.array([x1, y1]),
+                np.array([x1, y2]),
+                np.array([x2, y2]),
+                np.array([x2, y1]),
+            ]
+
+            proj_r = []
+            proj_u = []
+            for c in ground_corners:
+                dp = iarp_offset + c[0] * ref_uIAX + c[1] * ref_uIAY
+                proj_r.append(float(np.dot(dp, u_row)))
+                proj_u.append(float(np.dot(dp, u_col)))
+
+            r_min_raw, r_max_raw = min(proj_r), max(proj_r)
+            u_min_raw, u_max_raw = min(proj_u), max(proj_u)
+
+            # Apply pad_factor around center of projected bounding box
+            r_c = 0.5 * (r_min_raw + r_max_raw)
+            r_half = 0.5 * (r_max_raw - r_min_raw) * self.pad_factor
+            r_min, r_max = r_c - r_half, r_c + r_half
+
+            u_c = 0.5 * (u_min_raw + u_max_raw)
+            u_half = 0.5 * (u_max_raw - u_min_raw) * self.pad_factor
+            u_min, u_max = u_c - u_half, u_c + u_half
         else:
-            u_min, u_max = -100.0, 100.0
-            r_min, r_max = -100.0, 100.0
+            u_min, u_max = x1, x2
+            r_min, r_max = y1, y2
+
         return u_min, u_max, r_min, r_max
         
     def _write_sicd(self, output_path: str, img_cpu: np.ndarray, cphd_meta, tx_pol, rcv_pol, bw_range, bw_azm, N_range, N_azm, u_min, r_min, du_azm, dr_range, ref_pvp: Optional[dict] = None, num_samples: Optional[int] = None, is_rotated: bool = False):
@@ -185,56 +241,110 @@ class IFAProcessor:
         sub(sp, "Col", str(num_cols // 2))
 
         geo_data = sub(root, "GeoData")
-        scp = sub(geo_data, "EarthModel", "WGS_84")
-        scp = sub(geo_data, "SCP")
-        ecf = sub(scp, "ECF")
+        sub(geo_data, "EarthModel", "WGS_84")
+        scp_elem = sub(geo_data, "SCP")
+        ecf = sub(scp_elem, "ECF")
         sub(ecf, "X", str(cphd_meta.iarp_ecf[0]))
         sub(ecf, "Y", str(cphd_meta.iarp_ecf[1]))
         sub(ecf, "Z", str(cphd_meta.iarp_ecf[2]))
-        
-        llh = sub(scp, "LLH")
-        lat_rad, lon_rad, hae = _cartesian_to_geodetic(cphd_meta.iarp_ecf)
-        lat_deg = np.degrees(lat_rad)
-        lon_deg = np.degrees(lon_rad)
-        sub(llh, "Lat", str(np.clip(lat_deg, -90.0, 90.0)))
-        sub(llh, "Lon", str(np.clip(lon_deg, -180.0, 180.0)))
-        sub(llh, "HAE", str(hae))
+
+        llh = sub(scp_elem, "LLH")
+        lat_deg, lon_deg, hae = wgs84.cartesian_to_geodetic(cphd_meta.iarp_ecf)
+        sub(llh, "Lat", f"{np.clip(lat_deg, -90.0, 90.0):.9f}")
+        sub(llh, "Lon", f"{np.clip(lon_deg, -180.0, 180.0):.9f}")
+        sub(llh, "HAE", f"{hae:.9f}")
 
         # Determine Row/Col basis vectors based on orientation
         u_row_vec = cphd_meta.uIAX if is_rotated else cphd_meta.uIAY
         u_col_vec = cphd_meta.uIAY if is_rotated else cphd_meta.uIAX
 
-        # Approximate Image Corners for NITF headers
+        # Initial ImageCorners placeholder
         ic = sub(geo_data, "ImageCorners")
         row_extent = num_rows * dr_range
         col_extent = num_cols * du_azm
         r_deg = row_extent / 6378137.0 * 180.0 / np.pi
-        c_deg = col_extent / (6378137.0 * max(0.01, np.cos(lat_rad))) * 180.0 / np.pi
-        
-        icp1 = sub(ic, "ICP", index="1:FRFC")
-        sub(icp1, "Lat", str(np.clip(lat_deg + r_deg/2, -90, 90)))
-        sub(icp1, "Lon", str(np.clip(lon_deg - c_deg/2, -180, 180)))
-        
-        icp2 = sub(ic, "ICP", index="2:FRLC")
-        sub(icp2, "Lat", str(np.clip(lat_deg + r_deg/2, -90, 90)))
-        sub(icp2, "Lon", str(np.clip(lon_deg + c_deg/2, -180, 180)))
-        
-        icp3 = sub(ic, "ICP", index="3:LRLC")
-        sub(icp3, "Lat", str(np.clip(lat_deg - r_deg/2, -90, 90)))
-        sub(icp3, "Lon", str(np.clip(lon_deg + c_deg/2, -180, 180)))
-        
-        icp4 = sub(ic, "ICP", index="4:LRFC")
-        sub(icp4, "Lat", str(np.clip(lat_deg - r_deg/2, -90, 90)))
-        sub(icp4, "Lon", str(np.clip(lon_deg - c_deg/2, -180, 180)))
+        c_deg = col_extent / (6378137.0 * max(0.01, np.cos(np.radians(lat_deg)))) * 180.0 / np.pi
+        sub(sub(ic, "ICP", index="1:FRFC"), "Lat", f"{np.clip(lat_deg + r_deg/2, -90, 90):.9f}")
+        ic.find("./{*}ICP[@index='1:FRFC']").append(ET.Element("{urn:SICD:1.3.0}Lon"))
+        ic.find("./{*}ICP[@index='1:FRFC']/{*}Lon").text = f"{np.clip(lon_deg - c_deg/2, -180, 180):.9f}"
 
+        sub(sub(ic, "ICP", index="2:FRLC"), "Lat", f"{np.clip(lat_deg + r_deg/2, -90, 90):.9f}")
+        ic.find("./{*}ICP[@index='2:FRLC']").append(ET.Element("{urn:SICD:1.3.0}Lon"))
+        ic.find("./{*}ICP[@index='2:FRLC']/{*}Lon").text = f"{np.clip(lon_deg + c_deg/2, -180, 180):.9f}"
 
+        sub(sub(ic, "ICP", index="3:LRLC"), "Lat", f"{np.clip(lat_deg - r_deg/2, -90, 90):.9f}")
+        ic.find("./{*}ICP[@index='3:LRLC']").append(ET.Element("{urn:SICD:1.3.0}Lon"))
+        ic.find("./{*}ICP[@index='3:LRLC']/{*}Lon").text = f"{np.clip(lon_deg + c_deg/2, -180, 180):.9f}"
+
+        sub(sub(ic, "ICP", index="4:LRFC"), "Lat", f"{np.clip(lat_deg - r_deg/2, -90, 90):.9f}")
+        ic.find("./{*}ICP[@index='4:LRFC']").append(ET.Element("{urn:SICD:1.3.0}Lon"))
+        ic.find("./{*}ICP[@index='4:LRFC']/{*}Lon").text = f"{np.clip(lon_deg - c_deg/2, -180, 180):.9f}"
+
+        # Calculate exact geometry and kinematics when ref_pvp is provided (Audit C2 remediation)
+        has_pvp = (ref_pvp is not None and "TxTime" in ref_pvp and "TxPos" in ref_pvp and num_samples is not None)
+        if has_pvp:
+            t_tx = np.asarray(ref_pvp["TxTime"], dtype=np.float64)
+            t_rcv = np.asarray(ref_pvp.get("RcvTime", ref_pvp["TxTime"]), dtype=np.float64)
+            t_mid = 0.5 * (t_tx + t_rcv)
+            rcv_pos = ref_pvp.get("RcvPos", ref_pvp["TxPos"])
+            arp_mid = 0.5 * (np.asarray(ref_pvp["TxPos"], dtype=np.float64) + np.asarray(rcv_pos, dtype=np.float64))
+
+            # k-space exactly as processor mapped it (u_col_vec, u_row_vec)
+            Ku, Kr = compute_kspace(ref_pvp, u_col_vec, u_row_vec, num_samples, cphd_meta.domain_type, device="cpu")
+            Ku = Ku.numpy() if hasattr(Ku, "numpy") else np.asarray(Ku)
+            Kr = Kr.numpy() if hasattr(Kr, "numpy") else np.asarray(Kr)
+            ns_ = Ku.shape[1]
+            Ku_mid = Ku[:, ns_ // 2]
+            Kr_mid = Kr[:, ns_ // 2]
+            plr = np.arctan2(Ku_mid, Kr_mid)
+            fit_deg = min(5, max(1, len(t_mid) - 1))
+            plr_coef = npp.polyfit(t_mid, plr, fit_deg)
+
+            # Reference time: zero of polar angle nearest aperture centre
+            roots = npp.polyroots(plr_coef)
+            roots = roots[np.isreal(roots)].real
+            if len(roots) > 0:
+                t_ref = float(roots[np.argmin(np.abs(roots - t_mid.mean()))])
+            else:
+                t_ref = float(t_mid.mean())
+
+            # Spatial frequency scale factor as function of polar angle
+            F_mid = np.asarray(ref_pvp["SC0"], dtype=np.float64) + (ns_ // 2) * np.asarray(ref_pvp["SCSS"], dtype=np.float64)
+            ksf = np.sqrt(Ku_mid**2 + Kr_mid**2) / (2.0 * F_mid / SPEED_OF_LIGHT)
+            ksf_coef = npp.polyfit(plr, ksf, fit_deg)
+
+            # ARP polynomial in absolute time (since CollectionStart)
+            arp_coef = np.stack([npp.polyfit(t_mid, arp_mid[:, i], fit_deg) for i in range(3)])
+
+            kctr_dict = {
+                "Row": float(0.5 * (Kr.min() + Kr.max())),
+                "Col": float(0.5 * (Ku.min() + Ku.max()))
+            }
+            collect_duration = float(max(t_tx[-1], t_rcv[-1]))
+            t_start_proc = float(t_tx[0])
+            t_end_proc = float(t_tx[-1])
+            krg1, krg2 = float(Kr.min()), float(Kr.max())
+            kaz1, kaz2 = float(Ku.min()), float(Ku.max())
+        else:
+            t_ref = 0.0
+            kctr_dict = {"Row": 0.0, "Col": 0.0}
+            collect_duration = 0.0
+            t_start_proc = 0.0
+            t_end_proc = 0.0
+            arp_coef = np.zeros((3, 1))
+            plr_coef = np.zeros(1)
+            ksf_coef = np.ones(1)
+            krg1, krg2, kaz1, kaz2 = 0.0, 0.0, 0.0, 0.0
+
+        # --- Grid ---
         grid = sub(root, "Grid")
         sub(grid, "ImagePlane", self.image_plane.upper())
-        sub(grid, "Type", "PLANE")
+        sub(grid, "Type", "RGAZIM")
         time_coa = sub(grid, "TimeCOAPoly", order1="0", order2="0")
-        sub(time_coa, "Coef", "0.0", exponent1="0", exponent2="0")
-        
+        sub(time_coa, "Coef", f"{t_ref:.12f}", exponent1="0", exponent2="0")
+
         # Row maps to Range, Col maps to Azimuth
+        K_UNIFORM = 0.8859  # DIDD §4.14.6 normative uniform window resolution constant
         for dir_name, ss, bw, uvect in [("Row", dr_range, bw_range, u_row_vec), ("Col", du_azm, bw_azm, u_col_vec)]:
             d = sub(grid, dir_name)
             uv = sub(d, "UVectECF")
@@ -242,39 +352,33 @@ class IFAProcessor:
             sub(uv, "Y", str(uvect[1]))
             sub(uv, "Z", str(uvect[2]))
             sub(d, "SS", str(ss))
-            sub(d, "ImpRespWid", str(1.0 / max(1e-12, bw)))
+            sub(d, "ImpRespWid", f"{K_UNIFORM / max(1e-12, bw):.12f}")
             sub(d, "Sgn", "-1")
             sub(d, "ImpRespBW", str(bw))
-            sub(d, "KCtr", "0.0")
+            sub(d, "KCtr", f"{kctr_dict[dir_name]:.12f}")
             sub(d, "DeltaK1", str(-bw / 2.0))
             sub(d, "DeltaK2", str(bw / 2.0))
+            wgt = sub(d, "WgtType")
+            sub(wgt, "WindowName", "UNIFORM")
 
+        # --- Timeline ---
         timeline = sub(root, "Timeline")
-        from diffpfa.sicd_geometry import compute_scp_geometry, fit_arp_poly, compute_pfa_metadata
-        
-        # Fit ARP Poly and extract kinematics
-        pos_info = fit_arp_poly(ref_pvp) if ref_pvp is not None else fit_arp_poly(None)
-        
-        # Determine CollectStart from CPHD or fallback
         if cphd_meta.collection_start:
-            # Parse CPHD collection start, e.g. "2023-01-01T12:00:00Z"
             collect_start = str(cphd_meta.collection_start).replace(" ", "T").replace("+00:00", "Z")
         else:
             collect_start = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-            
         sub(timeline, "CollectStart", collect_start)
-        sub(timeline, "CollectDuration", f"{pos_info['CollectDuration']:.6f}")
+        sub(timeline, "CollectDuration", f"{collect_duration:.9f}")
 
-        # Position block with full polynomial
+        # --- Position ---
         pos = sub(root, "Position")
         arp = sub(pos, "ARPPoly")
-        for coord in ["X", "Y", "Z"]:
-            coefs = pos_info["ARPPoly"][coord]
-            order_k = len(coefs) - 1
-            coord_elem = sub(arp, coord, order1=str(order_k))
-            for k, val in enumerate(coefs):
-                sub(coord_elem, "Coef", f"{val:.12e}", exponent1=str(k))
+        for i, coord in enumerate(["X", "Y", "Z"]):
+            coord_elem = sub(arp, coord, order1=str(len(arp_coef[i]) - 1))
+            for k, val in enumerate(arp_coef[i]):
+                sub(coord_elem, "Coef", f"{val:.15e}", exponent1=str(k))
 
+        # --- RadarCollection ---
         radar_coll = sub(root, "RadarCollection")
         tx_freq = sub(radar_coll, "TxFrequency")
         sub(tx_freq, "Min", str(cphd_meta.global_fx_min))
@@ -287,14 +391,15 @@ class IFAProcessor:
         chan_params = sub(rcv_chans, "ChanParameters", index="1")
         sub(chan_params, "TxRcvPolarization", f"{tx_pol}:{rcv_pol}")
 
+        # --- ImageFormation ---
         img_form = sub(root, "ImageFormation")
         rcv_proc = sub(img_form, "RcvChanProc")
         sub(rcv_proc, "NumChanProc", "1")
         sub(rcv_proc, "PRFScaleFactor", "1.0")
         sub(rcv_proc, "ChanIndex", "1")
         sub(img_form, "TxRcvPolarizationProc", f"{tx_pol}:{rcv_pol}")
-        sub(img_form, "TStartProc", "0.0")
-        sub(img_form, "TEndProc", f"{pos_info['CollectDuration']:.6f}")
+        sub(img_form, "TStartProc", f"{t_start_proc:.9f}")
+        sub(img_form, "TEndProc", f"{t_end_proc:.9f}")
         tx_proc = sub(img_form, "TxFrequencyProc")
         sub(tx_proc, "MinProc", str(cphd_meta.global_fx_min))
         sub(tx_proc, "MaxProc", str(cphd_meta.global_fx_max))
@@ -303,46 +408,27 @@ class IFAProcessor:
         sub(img_form, "ImageBeamComp", "NO")
         sub(img_form, "AzAutofocus", "NO")
         sub(img_form, "RgAutofocus", "NO")
-        
+
+        # --- SCPCOA ---
         scpcoa = sub(root, "SCPCOA")
-        sub(scpcoa, "SCPTime", f"{pos_info['SCPTime']:.6f}")
-        
-        arp_pos = sub(scpcoa, "ARPPos")
-        sub(arp_pos, "X", f"{pos_info['ARPPos_COA'][0]:.6f}")
-        sub(arp_pos, "Y", f"{pos_info['ARPPos_COA'][1]:.6f}")
-        sub(arp_pos, "Z", f"{pos_info['ARPPos_COA'][2]:.6f}")
-            
-        arp_vel = sub(scpcoa, "ARPVel")
-        sub(arp_vel, "X", f"{pos_info['ARPVel_COA'][0]:.6f}")
-        sub(arp_vel, "Y", f"{pos_info['ARPVel_COA'][1]:.6f}")
-        sub(arp_vel, "Z", f"{pos_info['ARPVel_COA'][2]:.6f}")
-            
-        arp_acc = sub(scpcoa, "ARPAcc")
-        sub(arp_acc, "X", f"{pos_info['ARPAcc_COA'][0]:.6f}")
-        sub(arp_acc, "Y", f"{pos_info['ARPAcc_COA'][1]:.6f}")
-        sub(arp_acc, "Z", f"{pos_info['ARPAcc_COA'][2]:.6f}")
-        
+        sub(scpcoa, "SCPTime", f"{t_ref:.12f}")
         sub(scpcoa, "SideOfTrack", cphd_meta.side_of_track)
-        
-        # Calculate dynamic geometry values
-        if cphd_meta.srp_ecf is not None:
-            geom = compute_scp_geometry(
-                cphd_meta.srp_ecf,
-                pos_info['ARPPos_COA'],
-                pos_info['ARPVel_COA'],
-                side_of_track=cphd_meta.side_of_track,
-                image_plane=self.image_plane
-            )
-            sub(scpcoa, "SlantRange", f"{geom['SlantRange']:.6f}")
-            sub(scpcoa, "GroundRange", f"{geom['GroundRange']:.6f}")
-            sub(scpcoa, "DopplerConeAng", f"{geom['DopplerConeAng']:.6f}")
-            sub(scpcoa, "GrazeAng", f"{geom['GrazeAng']:.6f}")
-            sub(scpcoa, "IncidenceAng", f"{geom['IncidenceAng']:.6f}")
-            sub(scpcoa, "TwistAng", f"{geom['TwistAng']:.6f}")
-            sub(scpcoa, "SlopeAng", f"{geom['SlopeAng']:.6f}")
-            sub(scpcoa, "AzimAng", f"{geom['AzimAng']:.6f}")
-            sub(scpcoa, "LayoverAng", f"{geom['LayoverAng']:.6f}")
-        else:
+        if has_pvp:
+            try:
+                temp_tree = ET.ElementTree(root)
+                new_scpcoa = sksicd.compute_scp_coa(temp_tree)
+                root.replace(scpcoa, new_scpcoa)
+                scpcoa = new_scpcoa
+            except Exception:
+                pass
+        if scpcoa.find("./{*}ARPPos") is None:
+            # Fallback basic geometry if compute_scp_coa was not run
+            arp_pos = sub(scpcoa, "ARPPos")
+            sub(arp_pos, "X", "0.0"); sub(arp_pos, "Y", "0.0"); sub(arp_pos, "Z", "0.0")
+            arp_vel = sub(scpcoa, "ARPVel")
+            sub(arp_vel, "X", "1.0"); sub(arp_vel, "Y", "0.0"); sub(arp_vel, "Z", "0.0")
+            arp_acc = sub(scpcoa, "ARPAcc")
+            sub(arp_acc, "X", "0.0"); sub(arp_acc, "Y", "0.0"); sub(arp_acc, "Z", "0.0")
             sub(scpcoa, "SlantRange", "0.0")
             sub(scpcoa, "GroundRange", "0.0")
             sub(scpcoa, "DopplerConeAng", "90.0")
@@ -354,26 +440,38 @@ class IFAProcessor:
             sub(scpcoa, "LayoverAng", "0.0")
 
         # --- Radiometric Calibration (Relative) ---
-        # Satisfies downstream ATRs with mathematically balanced relative areas
         rad = sub(root, "Radiometric")
-        
         noise = sub(rad, "NoiseLevel")
         sub(noise, "NoiseLevelType", "ABSOLUTE")
         noise_poly = sub(noise, "NoisePoly", order1="0", order2="0")
         sub(noise_poly, "Coef", "0.0", exponent1="0", exponent2="0")
-        
-        rcssf = 1.0  # Assumes uncalibrated raw power
+
+        rcssf = 1.0
         slant_area = dr_range * du_azm
         beta_zero = rcssf / slant_area if slant_area > 0 else 1.0
-        
-        if 'geom' in locals():
-            graze_rad = np.radians(geom['GrazeAng'])
-            sigma_zero = beta_zero * np.cos(graze_rad)
-            gamma_zero = beta_zero * np.sin(graze_rad)
+
+        # -- NOTE (Audit C8 Remediated): Radiometric Calibration Ratios --
+        # Per SICD DIDD §4.10.4:
+        #   BetaZero (beta_0) is reflectivity per unit area in the slant plane.
+        #   SigmaZero (sigma_0) is reflectivity per unit area on the ground surface:
+        #       sigma_0 = beta_0 * cos(SlopeAng)
+        #       (Previously mistakenly coded as beta_0 * cos(GrazeAng)).
+        #   GammaZero (gamma_0) is reflectivity per unit area normal to the slant range vector:
+        #       gamma_0 = sigma_0 / cos(IncidenceAng) = beta_0 * cos(SlopeAng) / cos(IncidenceAng)
+        #       (Previously mistakenly coded as beta_0 * sin(GrazeAng)).
+        slope_elem = scpcoa.find("./{*}SlopeAng")
+        inc_elem = scpcoa.find("./{*}IncidenceAng")
+        if slope_elem is not None and inc_elem is not None and slope_elem.text and inc_elem.text:
+            slope_rad = np.radians(float(slope_elem.text))
+            inc_rad = np.radians(float(inc_elem.text))
+            sigma_zero = beta_zero * np.cos(slope_rad)
+            gamma_zero = sigma_zero / max(1e-12, np.cos(inc_rad))
         else:
-            sigma_zero = beta_zero * np.cos(np.radians(45.0))
-            gamma_zero = beta_zero * np.sin(np.radians(45.0))
-            
+            slope_rad = np.radians(45.0)
+            inc_rad = np.radians(45.0)
+            sigma_zero = beta_zero * np.cos(slope_rad)
+            gamma_zero = sigma_zero / max(1e-12, np.cos(inc_rad))
+
         for poly_name, poly_val in [
             ("RCSSFPoly", rcssf),
             ("SigmaZeroSFPoly", sigma_zero),
@@ -384,40 +482,65 @@ class IFAProcessor:
             sub(poly, "Coef", f"{poly_val:.6e}", exponent1="0", exponent2="0")
 
         # --- PFA Block ---
-        if ref_pvp is not None and num_samples is not None:
-            pfa_info = compute_pfa_metadata(
-                pvp=ref_pvp,
-                uIAX=u_col_vec,
-                uIAY=u_row_vec,
-                num_samples=num_samples,
-                domain_type=cphd_meta.domain_type,
-                side_of_track=cphd_meta.side_of_track
-            )
-            pfa = sub(root, "PFA")
-            fpn = sub(pfa, "FPN")
-            sub(fpn, "X", f"{pfa_info['FPN'][0]:.12f}")
-            sub(fpn, "Y", f"{pfa_info['FPN'][1]:.12f}")
-            sub(fpn, "Z", f"{pfa_info['FPN'][2]:.12f}")
-            
-            ipn = sub(pfa, "IPN")
-            sub(ipn, "X", f"{pfa_info['IPN'][0]:.12f}")
-            sub(ipn, "Y", f"{pfa_info['IPN'][1]:.12f}")
-            sub(ipn, "Z", f"{pfa_info['IPN'][2]:.12f}")
-            
-            sub(pfa, "PolarAngRefTime", f"{pfa_info['PolarAngRefTime']:.12f}")
-            
-            pap = sub(pfa, "PolarAngPoly", order1=str(len(pfa_info["PolarAngPoly"]) - 1))
-            for k, val in enumerate(pfa_info["PolarAngPoly"]):
-                sub(pap, "Coef", f"{val:.12e}", exponent1=str(k))
-                
-            sf_poly = sub(pfa, "SpatialFreqSFPoly", order1=str(len(pfa_info["SpatialFreqSFPoly"]) - 1))
-            for k, val in enumerate(pfa_info["SpatialFreqSFPoly"]):
-                sub(sf_poly, "Coef", f"{val:.12e}", exponent1=str(k))
-                
-            sub(pfa, "Krg1", f"{pfa_info['Krg1']:.12f}")
-            sub(pfa, "Krg2", f"{pfa_info['Krg2']:.12f}")
-            sub(pfa, "Kaz1", f"{pfa_info['Kaz1']:.12f}")
-            sub(pfa, "Kaz2", f"{pfa_info['Kaz2']:.12f}")
+        pfa = sub(root, "PFA")
+        ipn = np.cross(u_row_vec, u_col_vec)
+        ipn /= np.linalg.norm(ipn)
+        fpn = sub(pfa, "FPN")
+        sub(fpn, "X", f"{ipn[0]:.12f}")
+        sub(fpn, "Y", f"{ipn[1]:.12f}")
+        sub(fpn, "Z", f"{ipn[2]:.12f}")
+
+        ipn_elem = sub(pfa, "IPN")
+        sub(ipn_elem, "X", f"{ipn[0]:.12f}")
+        sub(ipn_elem, "Y", f"{ipn[1]:.12f}")
+        sub(ipn_elem, "Z", f"{ipn[2]:.12f}")
+
+        sub(pfa, "PolarAngRefTime", f"{t_ref:.12f}")
+
+        pap = sub(pfa, "PolarAngPoly", order1=str(len(plr_coef) - 1))
+        for k, val in enumerate(plr_coef):
+            sub(pap, "Coef", f"{val:.15e}", exponent1=str(k))
+
+        sf_poly = sub(pfa, "SpatialFreqSFPoly", order1=str(len(ksf_coef) - 1))
+        for k, val in enumerate(ksf_coef):
+            sub(sf_poly, "Coef", f"{val:.15e}", exponent1=str(k))
+
+        sub(pfa, "Krg1", f"{krg1:.12f}")
+        sub(pfa, "Krg2", f"{krg2:.12f}")
+        sub(pfa, "Kaz1", f"{kaz1:.12f}")
+        sub(pfa, "Kaz2", f"{kaz2:.12f}")
+
+        # --- Refine ImageCorners via ground-plane projection ---
+        if has_pvp:
+            try:
+                temp_tree = ET.ElementTree(root)
+                scp_row = num_rows // 2
+                scp_col = num_cols // 2
+                corners_rc = np.array([
+                    [0, 0],
+                    [0, num_cols - 1],
+                    [num_rows - 1, num_cols - 1],
+                    [num_rows - 1, 0]
+                ], dtype=np.float64)
+                xrow_ycol = np.stack([
+                    (corners_rc[:, 0] - scp_row) * dr_range,
+                    (corners_rc[:, 1] - scp_col) * du_azm
+                ], axis=1)
+                scp_ecf = np.asarray(cphd_meta.iarp_ecf, dtype=np.float64)
+                up = wgs84.up(wgs84.cartesian_to_geodetic(scp_ecf))
+                gpp, delta, ok = sksicd.image_to_ground_plane(temp_tree, xrow_ycol, scp_ecf, up)
+                if ok:
+                    llh = wgs84.cartesian_to_geodetic(gpp)
+                    ic_elem = root.find("./{*}GeoData/{*}ImageCorners")
+                    for c in list(ic_elem):
+                        ic_elem.remove(c)
+                    indices = ["1:FRFC", "2:FRLC", "3:LRLC", "4:LRFC"]
+                    for idx, (lat, lon, _) in zip(indices, llh):
+                        icp = sub(ic_elem, "ICP", index=idx)
+                        sub(icp, "Lat", f"{lat:.9f}")
+                        sub(icp, "Lon", f"{lon:.9f}")
+            except Exception:
+                pass
 
         xmltree = ET.ElementTree(root)
         clas_char = cphd_meta.classification[0].upper() if cphd_meta.classification else "U"
