@@ -238,3 +238,52 @@ def test_asymmetric_framing_scp_pixel(tmp_path):
         errs = [l.strip() for l in res.stdout.splitlines() if "[Error]" in l]
         assert not errs, f"sicdcheck reported errors on asymmetric SICD:\n" + "\n".join(errs)
 
+
+def test_rotated_nonsquare_ground_pixel_spacing():
+    """Audit A3: Verify rotated branch with non-square spatial bounds outputs correct row/col spacings."""
+    import numpy as np
+    from diffpfa.IFA.PFA import pfa_per_polar
+    from diffpfa.types import CPHDMetadata, ImageAreaBounds
+
+    npulse, ns = 128, 128
+    slant_range = 10000.0
+    theta_vec = np.linspace(-np.radians(1.0), np.radians(1.0), npulse)
+    # Radar at +y moving along x: LOS is along +y (uIAX)
+    pos_ecf = np.column_stack([slant_range * np.sin(theta_vec), slant_range * np.cos(theta_vec), np.zeros(npulse)])
+    uIAX = np.array([0.0, 1.0, 0.0])  # LOS
+    uIAY = np.array([1.0, 0.0, 0.0])  # Cross-range
+
+    meta = CPHDMetadata(
+        domain_type="FX", sgn=-1, global_fx_min=9.3e9, global_fx_max=9.9e9,
+        iarp_ecf=np.zeros(3), uIAX=uIAX, uIAY=uIAY, ref_ch_id="0",
+        image_area=ImageAreaBounds(-20, -10, 20, 10, None), extended_area=None,
+        collection_start="2026-01-01T00:00:00Z", radar_mode="SPOTLIGHT",
+        classification="UNCLASSIFIED", srp_ecf=np.zeros(3), arp_pos_coa=pos_ecf[npulse // 2],
+        arp_vel_coa=np.array([100, 0, 0]), side_of_track="L", line_spacing=None, sample_spacing=None,
+        raw_meta=None, ref_uIAX=uIAX, ref_uIAY=uIAY
+    )
+    pvp = {
+        "SRPPos": np.tile([0.0, 0.0, 0.0], (npulse, 1)),
+        "TxPos": pos_ecf,
+        "RcvPos": pos_ecf,
+        "TxVel": np.tile([100.0, 0.0, 0.0], (npulse, 1)),
+        "RcvVel": np.tile([100.0, 0.0, 0.0], (npulse, 1)),
+        "SC0": np.full(npulse, 9.3e9),
+        "SCSS": np.full(npulse, 600e6 / ns),
+        "RcvTime": np.linspace(0, 1, npulse),
+        "TxTime": np.linspace(0, 1, npulse),
+        "SIGNAL": np.ones(npulse, int)
+    }
+    sig = np.ones((npulse, ns), dtype=np.complex64)
+    # L_u = 40 (along uIAX = LOS = range), L_r = 20 (along uIAY = azm)
+    u_min, u_max = -20.0, 20.0
+    r_min, r_max = -10.0, 10.0
+    res = pfa_per_polar([sig], [pvp], [9.6e9], ["FX"], pvp["RcvTime"], meta, u_min, u_max, r_min, r_max, device="cpu")
+    img, bw_r, bw_u, N_range, N_azm, is_rotated = res
+    assert is_rotated is True
+    # Row (range) spans u_max - u_min = 40 m
+    # Col (azimuth) spans r_max - r_min = 20 m
+    assert np.isclose(res.dr_range, 40.0 / N_range)
+    assert np.isclose(res.du_azm, 20.0 / N_azm)
+
+

@@ -7,6 +7,26 @@ from scipy.fft import next_fast_len
 from diffpfa.IFA.channel.pfa_channel import process_cztnufft
 from diffpfa.IFA.kspace import compute_kspace
 
+class PFAResult(tuple):
+    """
+    Tuple containing (img_out, bw_range, bw_azm, N_range, N_azm, is_rotated_dataset)
+    with auxiliary k-space metadata and spacing attributes for downstream SICD writers.
+    """
+    def __new__(
+        cls,
+        values: tuple,
+        kspace_bounds: Optional[Tuple[float, float, float, float]] = None,
+        kctr_dict: Optional[Dict[str, float]] = None,
+        dr_range: Optional[float] = None,
+        du_azm: Optional[float] = None
+    ):
+        inst = super().__new__(cls, values)
+        inst.kspace_bounds = kspace_bounds
+        inst.kctr_dict = kctr_dict
+        inst.dr_range = dr_range
+        inst.du_azm = du_azm
+        return inst
+
 def _apply_ifft_and_deconv(grid: torch.Tensor, M_u: int, M_r, device: str) -> torch.Tensor:
     """
     deconv to adjust for the bell shaped taper caused by kaisser_bessel 
@@ -109,9 +129,10 @@ def pfa_per_polar(
     # -- 1.1) SOMETIMES THE GROUND AXES ARE FLIPPED FROM HOW WE'D EXPECT FOR ASSIGNING RANGE->k_R, AZM->k_U --
     
     N_s = Ku_list[0].shape[1]
-    cos_t = Ku_list[0][:, N_s//2] / (torch.sqrt(Ku_list[0][:, N_s//2]**2 + Kr_list[0][:, N_s//2]**2) + 1e-12)
-    sin_t = Kr_list[0][:, N_s//2] / (torch.sqrt(Ku_list[0][:, N_s//2]**2 + Kr_list[0][:, N_s//2]**2) + 1e-12)
-    is_rotated_dataset = abs(cos_t.mean()) > abs(sin_t.mean())
+    denom = torch.sqrt(Ku_list[0][:, N_s//2]**2 + Kr_list[0][:, N_s//2]**2) + 1e-12
+    cos_t = Ku_list[0][:, N_s//2] / denom
+    sin_t = Kr_list[0][:, N_s//2] / denom
+    is_rotated_dataset = bool(abs(cos_t.mean()) > abs(sin_t.mean()))
 
     if is_rotated_dataset:
         print("Data is rotated compared to what PFA expects. Swapping internal axes for processing...")
@@ -301,7 +322,26 @@ def pfa_per_polar(
     bw_range, bw_azm = bw_r, bw_u
     N_range, N_azm = N_r, N_u
 
-    return img_out, bw_range, bw_azm, N_range, N_azm, is_rotated_dataset
+    # Exact pixel spacings (Audit A3)
+    dr_range = float(L_r / max(N_range, 1))
+    du_azm = float(L_u / max(N_azm, 1))
+
+    # Combined k-space bounds across all gridded channels (Audit G1)
+    krg1, krg2 = float(gkr_min), float(gkr_max)
+    kaz1, kaz2 = float(gku_min), float(gku_max)
+    kspace_bounds = (krg1, krg2, kaz1, kaz2)
+    kctr_dict = {
+        "Row": float(gkr_ctr),
+        "Col": float(gku_ctr)
+    }
+
+    return PFAResult(
+        (img_out, bw_range, bw_azm, N_range, N_azm, is_rotated_dataset),
+        kspace_bounds=kspace_bounds,
+        kctr_dict=kctr_dict,
+        dr_range=dr_range,
+        du_azm=du_azm
+    )
 
 
 def run_diffpfa_tensor(

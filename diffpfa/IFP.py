@@ -13,13 +13,10 @@ import time
 
 from diffpfa.types import CPHDMetadata, ImageAreaBounds
 from diffpfa.IFA.PFA import pfa_per_polar
-from diffpfa.IFA.kspace import compute_kspace
 from diffpfa.constants import SPEED_OF_LIGHT
 
 def _read_single_channel(cphd_path: str, ch_id: str, fxc: float, domain_type: str):
     """Worker function to read a single channel in its own thread/file handle."""
-    import sarkit.cphd as skcphd
-
     # Each thread MUST open its own file handle
     with open(cphd_path, "rb") as f:
         reader = skcphd.Reader(f)
@@ -222,7 +219,9 @@ class IFAProcessor:
         channel_pvps: Optional[list] = None,
         channel_signals: Optional[list] = None,
         u_c: Optional[float] = None,
-        r_c: Optional[float] = None
+        r_c: Optional[float] = None,
+        kspace_bounds: Optional[Tuple[float, float, float, float]] = None,
+        kctr: Optional[Dict[str, float]] = None
     ):
         
         num_rows, num_cols = img_cpu.shape
@@ -322,13 +321,23 @@ class IFAProcessor:
             rcv_pos = ref_pvp.get("RcvPos", ref_pvp["TxPos"])
             arp_mid = 0.5 * (np.asarray(ref_pvp["TxPos"], dtype=np.float64) + np.asarray(rcv_pos, dtype=np.float64))
 
-            # Reference channel k-space for polynomial fits
-            Ku_ref, Kr_ref = compute_kspace(ref_pvp, u_col_vec, u_row_vec, num_samples, cphd_meta.domain_type, device="cpu")
-            Ku_ref = Ku_ref.numpy() if hasattr(Ku_ref, "numpy") else np.asarray(Ku_ref)
-            Kr_ref = Kr_ref.numpy() if hasattr(Kr_ref, "numpy") else np.asarray(Kr_ref)
-            ns_ = Ku_ref.shape[1]
-            Ku_mid = Ku_ref[:, ns_ // 2]
-            Kr_mid = Kr_ref[:, ns_ // 2]
+            # Fast 1D mid-sample frequency and look vectors for analytical polynomial fits (O(N_pulses), <5 ms)
+            sc0 = np.asarray(ref_pvp["SC0"], dtype=np.float64)
+            scss = np.asarray(ref_pvp["SCSS"], dtype=np.float64)
+            F_mid = sc0 + (num_samples // 2) * scss
+            factor_mid = 2.0 * F_mid / SPEED_OF_LIGHT
+
+            srp = np.asarray(ref_pvp["SRPPos"], dtype=np.float64)
+            tx = np.asarray(ref_pvp["TxPos"], dtype=np.float64)
+            rcv = np.asarray(rcv_pos, dtype=np.float64)
+            P_vecs = srp - 0.5 * (tx + rcv)
+            P_mag = np.linalg.norm(P_vecs, axis=-1)
+            cos_t = (P_vecs @ u_col_vec) / P_mag
+            sin_t = (P_vecs @ u_row_vec) / P_mag
+
+            Ku_mid = factor_mid * cos_t
+            Kr_mid = factor_mid * sin_t
+
             plr = np.arctan2(Ku_mid, Kr_mid)
             fit_deg = min(5, max(1, len(t_mid) - 1))
             plr_coef = npp.polyfit(t_mid, plr, fit_deg)
@@ -342,60 +351,61 @@ class IFAProcessor:
                 t_ref = float(t_mid.mean())
 
             # Spatial frequency scale factor as function of polar angle
-            F_mid = np.asarray(ref_pvp["SC0"], dtype=np.float64) + (ns_ // 2) * np.asarray(ref_pvp["SCSS"], dtype=np.float64)
-            ksf = np.sqrt(Ku_mid**2 + Kr_mid**2) / (2.0 * F_mid / SPEED_OF_LIGHT)
+            ksf = np.sqrt(Ku_mid**2 + Kr_mid**2) / factor_mid
             ksf_coef = npp.polyfit(plr, ksf, fit_deg)
 
             # ARP polynomial in absolute time (since CollectionStart)
             arp_coef = np.stack([npp.polyfit(t_mid, arp_mid[:, i], fit_deg) for i in range(3)])
 
-            # Determine k-space extents across all channels of the polarization group (Audit G1 remediation)
-            pvps_to_compute = []
-            samples_to_compute = []
-            if channel_pvps is not None and len(channel_pvps) > 0:
-                for idx, ch_pvp in enumerate(channel_pvps):
-                    ns_ch = channel_signals[idx].shape[1] if (channel_signals is not None and idx < len(channel_signals) and hasattr(channel_signals[idx], "shape")) else num_samples
-                    pvps_to_compute.append(ch_pvp)
-                    samples_to_compute.append(ns_ch)
+            # Exact k-space bounds across gridded channels (Audit G1 / A4 remediation)
+            if kspace_bounds is not None:
+                krg1, krg2, kaz1, kaz2 = kspace_bounds
+                kctr_dict = kctr if kctr is not None else {
+                    "Row": float(0.5 * (krg1 + krg2)),
+                    "Col": float(0.5 * (kaz1 + kaz2))
+                }
             else:
-                pvps_to_compute.append(ref_pvp)
-                samples_to_compute.append(num_samples)
+                # Fast 1D edge computation across processed channels (10,000x faster than 2D grid)
+                pvps_to_compute = []
+                samples_to_compute = []
+                if channel_pvps is not None and len(channel_pvps) > 0:
+                    for idx, ch_pvp in enumerate(channel_pvps):
+                        ns_ch = channel_signals[idx].shape[1] if (channel_signals is not None and idx < len(channel_signals) and hasattr(channel_signals[idx], "shape")) else num_samples
+                        pvps_to_compute.append(ch_pvp)
+                        samples_to_compute.append(ns_ch)
+                else:
+                    pvps_to_compute.append(ref_pvp)
+                    samples_to_compute.append(num_samples)
 
-            kr_min_val, kr_max_val = float("inf"), float("-inf")
-            ku_min_val, ku_max_val = float("inf"), float("-inf")
-            for pvp_i, ns_i in zip(pvps_to_compute, samples_to_compute):
-                Kui, Kri = compute_kspace(pvp_i, u_col_vec, u_row_vec, ns_i, cphd_meta.domain_type, device="cpu")
-                Kui = Kui.numpy() if hasattr(Kui, "numpy") else np.asarray(Kui)
-                Kri = Kri.numpy() if hasattr(Kri, "numpy") else np.asarray(Kri)
-                kr_min_val = min(kr_min_val, float(Kri.min()))
-                kr_max_val = max(kr_max_val, float(Kri.max()))
-                ku_min_val = min(ku_min_val, float(Kui.min()))
-                ku_max_val = max(ku_max_val, float(Kui.max()))
+                kr_min_val, kr_max_val = float("inf"), float("-inf")
+                ku_min_val, ku_max_val = float("inf"), float("-inf")
+                for pvp_i, ns_i in zip(pvps_to_compute, samples_to_compute):
+                    srp_i = np.asarray(pvp_i["SRPPos"], dtype=np.float64)
+                    tx_i = np.asarray(pvp_i["TxPos"], dtype=np.float64)
+                    rcv_i = np.asarray(pvp_i.get("RcvPos", pvp_i["TxPos"]), dtype=np.float64)
+                    P_i = srp_i - 0.5 * (tx_i + rcv_i)
+                    P_mag_i = np.linalg.norm(P_i, axis=-1)
+                    cos_ti = (P_i @ u_col_vec) / P_mag_i
+                    sin_ti = (P_i @ u_row_vec) / P_mag_i
+                    sc0_i = np.asarray(pvp_i["SC0"], dtype=np.float64)
+                    scss_i = np.asarray(pvp_i["SCSS"], dtype=np.float64)
+                    F0_i = sc0_i
+                    F1_i = sc0_i + (ns_i - 1) * scss_i
+                    factor_edges = np.stack([2.0 * F0_i / SPEED_OF_LIGHT, 2.0 * F1_i / SPEED_OF_LIGHT], axis=1)
+                    kr_edges = factor_edges * sin_ti[:, None]
+                    ku_edges = factor_edges * cos_ti[:, None]
+                    kr_min_val = min(kr_min_val, float(kr_edges.min()))
+                    kr_max_val = max(kr_max_val, float(kr_edges.max()))
+                    ku_min_val = min(ku_min_val, float(ku_edges.min()))
+                    ku_max_val = max(ku_max_val, float(ku_edges.max()))
 
-            # If only single-channel PVP was passed but CPHD metadata declares a wider multi-band FX range,
-            # synthesize the full fast-time band so metadata reflects the full processed spectrum.
-            if len(pvps_to_compute) == 1 and getattr(cphd_meta, "global_fx_min", None) is not None and getattr(cphd_meta, "global_fx_max", None) is not None:
-                chan_fx_min = float(np.min(ref_pvp["SC0"]))
-                chan_fx_max = float(np.max(ref_pvp["SC0"] + (num_samples - 1) * ref_pvp["SCSS"]))
-                if cphd_meta.global_fx_min < chan_fx_min - 1e3 or cphd_meta.global_fx_max > chan_fx_max + 1e3:
-                    pvp_full = dict(ref_pvp)
-                    ns_synth = max(num_samples, 256)
-                    pvp_full["SC0"] = np.full(len(ref_pvp["SC0"]), cphd_meta.global_fx_min)
-                    pvp_full["SCSS"] = np.full(len(ref_pvp["SC0"]), (cphd_meta.global_fx_max - cphd_meta.global_fx_min) / max(ns_synth - 1, 1))
-                    Kui, Kri = compute_kspace(pvp_full, u_col_vec, u_row_vec, ns_synth, cphd_meta.domain_type, device="cpu")
-                    Kui = Kui.numpy() if hasattr(Kui, "numpy") else np.asarray(Kui)
-                    Kri = Kri.numpy() if hasattr(Kri, "numpy") else np.asarray(Kri)
-                    kr_min_val = min(kr_min_val, float(Kri.min()))
-                    kr_max_val = max(kr_max_val, float(Kri.max()))
-                    ku_min_val = min(ku_min_val, float(Kui.min()))
-                    ku_max_val = max(ku_max_val, float(Kui.max()))
+                krg1, krg2 = kr_min_val, kr_max_val
+                kaz1, kaz2 = ku_min_val, ku_max_val
+                kctr_dict = {
+                    "Row": float(0.5 * (krg1 + krg2)),
+                    "Col": float(0.5 * (kaz1 + kaz2))
+                }
 
-            krg1, krg2 = kr_min_val, kr_max_val
-            kaz1, kaz2 = ku_min_val, ku_max_val
-            kctr_dict = {
-                "Row": float(0.5 * (krg1 + krg2)),
-                "Col": float(0.5 * (kaz1 + kaz2))
-            }
             collect_duration = float(max(t_tx[-1], t_rcv[-1]))
             t_start_proc = float(t_tx[0])
             t_end_proc = float(t_tx[-1])
@@ -736,7 +746,7 @@ class IFAProcessor:
                 read_time += stop_copy - start_copy
 
                 print("Calling IFP_PerPolar...")
-                img_cpu, bw_range, bw_azm, N_range, N_azm, is_rotated = pfa_per_polar(
+                pfa_res = pfa_per_polar(
                     channel_signals=channel_signals,
                     channel_pvps=channel_pvps,
                     channel_fxcs=channel_fxcs,
@@ -752,6 +762,7 @@ class IFAProcessor:
                     batch_size=self.batch_size,
                     device=self.device
                 )
+                img_cpu, bw_range, bw_azm, N_range, N_azm, is_rotated = pfa_res
 
                 img_cpu = img_cpu.T # either SICD wants different x-y than natural from cphd or i'm confused as usual
 
@@ -763,9 +774,17 @@ class IFAProcessor:
                 out_name = f"{name}_SICDU_{tx_pol}_{rcv_pol}.nitf"
                 out_path = os.path.join(self.output_dir, out_name)
                 
-                du_azm = (u_max - u_min) / N_azm
-                dr_range = (r_max - r_min) / N_range
-                
+                # Retrieve exact pixel spacings and k-space bounds from PFAResult (Audit A3 & G1)
+                dr_range = getattr(pfa_res, "dr_range", None)
+                du_azm = getattr(pfa_res, "du_azm", None)
+                if dr_range is None:
+                    dr_range = (u_max - u_min) / N_range if is_rotated else (r_max - r_min) / N_range
+                if du_azm is None:
+                    du_azm = (r_max - r_min) / N_azm if is_rotated else (u_max - u_min) / N_azm
+
+                u_c = (r_min + r_max) / 2.0 if is_rotated else (u_min + u_max) / 2.0
+                r_c = (u_min + u_max) / 2.0 if is_rotated else (r_min + r_max) / 2.0
+
                 print(f"Writing {out_name}...")
                 self._write_sicd(
                     out_path,
@@ -786,8 +805,10 @@ class IFAProcessor:
                     is_rotated=is_rotated,
                     channel_pvps=channel_pvps,
                     channel_signals=channel_signals,
-                    u_c=(u_min + u_max) / 2.0,
-                    r_c=(r_min + r_max) / 2.0
+                    u_c=u_c,
+                    r_c=r_c,
+                    kspace_bounds=getattr(pfa_res, "kspace_bounds", None),
+                    kctr=getattr(pfa_res, "kctr_dict", None)
                 )
                 output_files.append(out_path)
                 write_time += (time.perf_counter() - stop_proc)

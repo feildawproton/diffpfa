@@ -24,10 +24,15 @@ python tools/convert2png.py /path/to/output_sicds/image.nitf /path/to/output.png
 ```
 
 ### 3. Simulation & Validation
-To run the physical stepped-chirp simulation suite with inter-step time delays ($\Delta \tau$), platform motion, and downconversion:
-```bash
-python simulation/stepped_chirp_simulation.py
-```
+Physical SAR waveform simulations are available under `simulation/`:
+- **Stepped-Chirp Multi-Channel Simulation**: Evaluates coherent accumulation across stepped-frequency subbands with inter-step delays ($\Delta \tau$), platform motion, and comparisons against an ideal monolithic full-band reference:
+  ```bash
+  python simulation/stepped_chirp_simulation.py
+  ```
+- **Receiver Hardware & CPHD Compensation Simulation**: Models transmitter carrier stepping, local oscillator (LO) phase resets, range compression, and CPHD producer compensation (CPHD DIDD §1.4):
+  ```bash
+  python simulation/stepped_chirp_receiver_simulation.py
+  ```
 
 ### 4. Differentiable Tensor Usage
 For adversarial attacks, downstream optimization, or learned phase history estimation, use the tensor-native entry point to compute gradients back to the signal tensor:
@@ -56,7 +61,7 @@ print("Signal gradient norm:", signal.grad.norm().item())
 ```
 
 ### 5. Running Tests
-To execute the automated unit and schema validation test suite:
+To execute the complete automated test suite (including analytical forward model comparisons, subband weighting, differentiability adjoint checks, rotated-axis handling, and SICD schema validation with NGA's `sicdcheck`):
 ```bash
 pytest tests/ -v
 ```
