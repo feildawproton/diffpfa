@@ -67,7 +67,7 @@ The pipeline is split between I/O + state and processing to separate concerns an
 
 ### 1. I/O and State (`IFAProcessor`)
 - **Parallel Read**: Uses threaded execution to read independent CPHD channels asynchronously.
-- **Dynamic Geometry & Slant Framing**: Supports both `SLANT` (default) and `GROUND` image planes. For slant plane imaging, projects ground `ImageArea` corners onto line-of-sight and cross-range axes with configurable padding (`pad_factor=1.20`), exactly reproducing vendor slant extents.
+- **Dynamic Geometry & Slant Framing**: Supports both `SLANT` (default) and `GROUND` image planes. For slant plane imaging, projects ground `ImageArea` corners onto line-of-sight and cross-range axes with configurable padding (`pad_factor=1.20`), closely matching vendor slant framing (and reproducing modern vendor processor extents within 0.2%–0.4%).
 - **NGA-Standard Oversampling**: Forms orthogonal K-space grids with native Nyquist calculations, cleanly oversampled at 1.25x to match NGA-certified "gold" implementations.
 - **Full Geolocation Metadata**: Computes exact NGA standard analytical formulas for all 9 SCPCOA angles (`DopplerConeAng`, `GrazeAng`, `IncidenceAng`, `TwistAng`, `SlopeAng`, `AzimAng`, `LayoverAng`, `SlantRange`, `GroundRange`).
 - **5th-Order Kinematics (`ARPPoly`)**: Fits degree-5 polynomials to $(TxPos + RcvPos)/2$ across the dwell time, extracting exact analytical velocity and acceleration vectors at the Center of Aperture ($t_{COA}$).

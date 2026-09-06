@@ -48,9 +48,9 @@ All test suites now execute **100% green with zero failures**:
   - Set `Grid/Type` to `"RGAZIM"`.
   - Set `Grid/Row,Col/ImpRespWid` to $0.8859 / \text{BW}$ for uniform weighting per DIDD Table 5.2.
   - Set `Grid/Row,Col/KCtr` to baseband center of Cartesian k-space grid $\frac{1}{2}(K_{\min} + K_{\max})$.
-  - Set `Grid/TimeCOAPoly` order-0 coefficient to $t_{\text{ref}}$ (instant when look vector is orthogonal to velocity).
+  - Set `Grid/TimeCOAPoly` order-0 coefficient to $t_{\text{ref}}$ (instant corresponding to the zero of the polar angle about the Row axis).
   - Referenced `Timeline` and `ImageFormation` time bounds in absolute time since `CollectionStart`.
-  - Fitted `Position/ARPPoly` 5th-order polynomials to absolute collection timeline ($t - t_{\text{mid}}$).
+  - Fitted `Position/ARPPoly` 5th-order polynomials to absolute collection timeline (in absolute time since `CollectionStart`).
   - Computed `SCPCOA` dynamically at $t_{\text{ref}}$ via `sarkit.sicd.compute_scp_coa`.
   - Populated `<PFA>` block: `PolarAngRefTime = t_ref`, `PolarAngPoly` fitted in absolute time, `SpatialFreqSFPoly` fitted in polar angle with $K_{\text{sf}} = \frac{\sqrt{K_u^2+K_r^2}}{2 F_{\text{mid}}/c}$, and `IPN/FPN` aligned with $\hat{u}_{\text{row}} \times \hat{u}_{\text{col}}$.
   - Computed corner geodetics using `sarkit.sicd.image_to_ground_plane` (R/Rdot projection onto the SCP-height ground plane, settling disagreement §4.2).
@@ -130,7 +130,25 @@ All test suites now execute **100% green with zero failures**:
   - Added subband coherence regression test to `tests/test_pfa_coherence.py`.
   - Added `sicdcheck` consistency test to `tests/test_sicd_xml_schema.py`.
   - Created `tests/test_differentiability.py` testing gradient density, autograd tensor entry points, and adjoint consistency.
-- **Verification:** All 13 tests in `tests/`, all 12 tests in `audit/claude_code_fable_5_1/proposed_tests/test_diffpfa_audit.py`, and all 4 tests in `audit/agy_with_gemini_3.8_flash/test_audit_regressions.py` pass.
+- **Verification:** All 15 tests in `tests/`, all 12 tests in `audit/claude_code_fable_5_1/proposed_tests/test_diffpfa_audit.py`, and all 4 tests in `audit/agy_with_gemini_3.8_flash/test_audit_regressions.py` pass.
+
+---
+
+### Follow-up Verification Gaps (G1 & G2) Remediated
+Following verification by Claude Code (`audit/claude_code_fable_5_1/REMEDIATION_VERIFICATION.md`), two latent gaps and cleanliness items were resolved:
+
+1. **Gap 1 (Stepped-Chirp Multi-Channel Metadata in `_write_sicd`):**
+   - **Finding:** `_write_sicd` previously recomputed `Ku, Kr` from only the first channel `ref_pvp = channel_pvps[0]`, setting `Row/KCtr` to sub-band 0 rather than the combined spectrum and causing `sicdcheck` error `[Error] Need: Row IPR bandwidth supported by Krg`.
+   - **Fix:** In [`diffpfa/IFP.py`](file:///home/feildaw/diffpfa/diffpfa/IFP.py), `_write_sicd` now accepts `channel_pvps` and `channel_signals`, computing `Ku, Kr` across all channels in the polarization group (with a fallback synthesizing full bandwidth if only a single-channel PVP is passed but `global_fx_min / max` are set). `Row/KCtr` matches the combined grid center and `Krg` encompasses the full bandwidth. Validated with `sicdcheck` producing **0 errors**.
+
+2. **Gap 2 (Asymmetric Framing `SCPPixel` & ICP Projection):**
+   - **Finding:** When asymmetric bounds are requested (`(u_c, r_c) != 0`), `pfa_per_polar` shifts the SRP to pixel `(N_r/2 - r_c/dr, N_u/2 - u_c/du)`, but `_write_sicd` previously hardcoded `SCPPixel = (N_r//2, N_u//2)` and projected ground corners about that wrong center.
+   - **Fix:** In [`diffpfa/IFP.py`](file:///home/feildaw/diffpfa/diffpfa/IFP.py), computed exact `scp_row = round(num_rows/2 - r_c/dr_range)` and `scp_col = round(num_cols/2 - u_c/du_azm)`. Used these coordinates in `ImageData/SCPPixel` and in `sarkit.sicd.image_to_ground_plane`. Validated: SRP target lands exactly on `SCPPixel` with 0.00 m mis-registration.
+
+3. **Performance & Documentation Items:**
+   - **Tensor Memory Optimization:** In [`diffpfa/IFA/PFA.py`](file:///home/feildaw/diffpfa/diffpfa/IFA/PFA.py#L40-L46), cast `deconv` to `img.real.dtype` (`float32`) prior to division, preventing PyTorch implicit promotion to `complex128` and saving 50% memory on large image tensors.
+   - **Reference Module Documentation:** Added explicit module docstring to [`diffpfa/sicd_geometry.py`](file:///home/feildaw/diffpfa/diffpfa/sicd_geometry.py) documenting it as a standalone reference implementation (production metadata is handled via `sarkit` in `IFP.py`).
+   - **Regression Suite:** Added `test_multichannel_stepped_chirp_sicd_metadata` and `test_asymmetric_framing_scp_pixel` to [`tests/test_sicd_xml_schema.py`](file:///home/feildaw/diffpfa/tests/test_sicd_xml_schema.py).
 
 ---
 
@@ -154,7 +172,7 @@ To re-verify all suites independently:
 # Set environment
 source /home/feildaw/mypyenv/bin/activate
 
-# 1. Run core library test suite (13 tests)
+# 1. Run core library test suite (15 tests)
 pytest tests/ -v
 
 # 2. Run Audit Team A test suite (12 tests)
@@ -163,6 +181,6 @@ pytest audit/claude_code_fable_5_1/proposed_tests/test_diffpfa_audit.py -v
 # 3. Run Audit Team B test suite (4 tests)
 pytest audit/agy_with_gemini_3.8_flash/test_audit_regressions.py -v
 
-# 4. Run all suites together in one command
+# 4. Run all suites together in one command (31 tests total)
 pytest tests/ audit/claude_code_fable_5_1/proposed_tests/test_diffpfa_audit.py audit/agy_with_gemini_3.8_flash/test_audit_regressions.py
 ```

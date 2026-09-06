@@ -40,6 +40,9 @@ def _apply_ifft_and_deconv(grid: torch.Tensor, M_u: int, M_r, device: str) -> to
     )
     deconv = deconv / (torch.sinh(beta_tensor) / beta_tensor)
     
+    # Cast deconv to the image real dtype (e.g., float32) to prevent implicit promotion to complex128
+    deconv = deconv.to(img.real.dtype)
+
     # Out-of-place division to preserve autograd gradient graph
     img = img / (deconv.unsqueeze(1) + 1e-12)  
     return img

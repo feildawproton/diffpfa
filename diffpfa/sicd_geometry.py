@@ -1,3 +1,12 @@
+"""
+Standalone reference implementation of SICD geometry and polynomial fitting algorithms.
+
+NOTE: The production diffpfa pipeline (IFP.py) delegates SICD metadata generation,
+exact ARP polynomial fitting, and ground-plane projections directly to sarkit
+(sarkit.sicd.compute_scp_coa, sarkit.sicd.image_to_ground_plane).
+This module is retained as an independent reference and validation utility
+(tested in tests/test_geometry.py).
+"""
 import numpy as np
 
 # WGS-84 ellipsoid parameters
