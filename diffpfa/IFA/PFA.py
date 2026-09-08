@@ -4,8 +4,9 @@ from typing import List, Dict, Tuple, Optional, Union
 import math
 from scipy.fft import next_fast_len
 
-from diffpfa.IFA.channel.pfa_channel import process_cztnufft
 from diffpfa.IFA.kspace import compute_kspace
+from diffpfa.IFA.channel.czt_torch import batch_czt_range
+from diffpfa.IFA.channel.nufft_torch import nufft_grid_1d
 
 class PFAResult(tuple):
     """
@@ -86,6 +87,9 @@ def pfa_per_polar(
     allocates gpu shared kspace and image space
     allocates and copies per channel; cleans up after each channel
     copies image to cpu, cleans up
+
+    - assumes FX domain.
+    - assumes requested axis are alignedish with range and cross range
     """
 
     # -- 0.9) MASK VECTORS WHERE SIGNAL != 1 (Audit C9 / F12) --
@@ -115,32 +119,37 @@ def pfa_per_polar(
     Ku_list = []                                    # per channel
     Kr_list = []
     for i in range(len(channel_signals)):
+        # compute_kspace is entirely on device, so do some transfers
+
+        u_axis = torch.as_tensor(cphd_meta.uIAX, dtype=torch.float64, device=device)
+        r_axis = torch.as_tensor(cphd_meta.uIAY, dtype=torch.float64, device=device)
+
+        SRPPos = torch.as_tensor(channel_pvps[i]["SRPPos"], dtype=torch.float64, device=device)
+        RcvPos = torch.as_tensor(channel_pvps[i]["RcvPos"], dtype=torch.float64, device=device)
+        TxPos  = torch.as_tensor(channel_pvps[i]["TxPos"], dtype=torch.float64, device=device)
+        Fx0    = torch.as_tensor(channel_pvps[i]["SC0"], dtype=torch.float64, device=device)
+        FxSS   = torch.as_tensor(channel_pvps[i]["SCSS"], dtype=torch.float64, device=device)
+
         Ku_chnnl, Kr_chnnl = compute_kspace(
-            channel_pvps[i],
-            cphd_meta.uIAX,
-            cphd_meta.uIAY,
+            u_axis,
+            r_axis,
+            SRPPos,
+            RcvPos,
+            TxPos,
+            Fx0,
+            FxSS,
             channel_signals[i].shape[1],
-            channel_domain_types[i],
             device=device
         ) 
         Ku_list.append(Ku_chnnl)
         Kr_list.append(Kr_chnnl)
         
-    # -- 1.1) SOMETIMES THE GROUND AXES ARE FLIPPED FROM HOW WE'D EXPECT FOR ASSIGNING RANGE->k_R, AZM->k_U --
-    
-    N_s = Ku_list[0].shape[1]
-    denom = torch.sqrt(Ku_list[0][:, N_s//2]**2 + Kr_list[0][:, N_s//2]**2) + 1e-12
-    cos_t = Ku_list[0][:, N_s//2] / denom
-    sin_t = Kr_list[0][:, N_s//2] / denom
-    is_rotated_dataset = bool(abs(cos_t.mean()) > abs(sin_t.mean()))
+        del u_axis, r_axis
+        del SRPPos, RcvPos, TxPos, Fx0, FxSS
 
-    if is_rotated_dataset:
-        print("Data is rotated compared to what PFA expects. Swapping internal axes for processing...")
-        Ku_list, Kr_list = Kr_list, Ku_list
-        u_min, r_min = r_min, u_min
-        u_max, r_max = r_max, u_max
-        if custom_pixel_spacing is not None:
-            custom_pixel_spacing = (custom_pixel_spacing[1], custom_pixel_spacing[0])
+    # -- 1.1) SOMETIMES THE GROUND AXES ARE FLIPPED FROM HOW WE'D EXPECT FOR ASSIGNING RANGE->k_R, AZM->k_U --
+
+    # not for slant. for ground, that's the caller's problem....
 
     # -- 1.2) CALC GLOBALS --
     
@@ -171,10 +180,20 @@ def pfa_per_polar(
     N_u = next_fast_len(int(np.round(L_u / du))) # be kind to FFTs
     N_r = next_fast_len(int(np.round(L_r / dr)))
 
+    # -- 2.1) Other stuff the current fft implementations want
+
+    dK_r = 1 / L_r
+
+    k_out_start_r = gkr_ctr - (N_r / 2.0) * dK_r
+    k_out_step_r = dK_r
+
+    m_idx = torch.arange(N_r, device=device, dtype=torch.float64)
+    Kr_cart = k_out_start_r + m_idx * dK_r
+
+
     # -- 3.) HOLD GLOBAL RESULTS AND PROCESS PER CHANNEL -- 
     
     combined_grid = None
-    grid_params   = None
     
     for i in range(len(channel_signals)):
         
@@ -184,79 +203,74 @@ def pfa_per_polar(
         else:
             sig = torch.from_numpy(channel_signals[i].astype(np.complex64)).cfloat().to(device)
         
-        # -- NOTE (Audit C6 Remediated): CPHD SGN convention --
+        # -- CPHD SGN convention --
         # CPHD DIDD §4.3 defines phase phi(fx) = SGN * 2 * pi * fx * Delta_TOA.
-        # The standard SAR imaging processor assumes SGN = -1 (echo delayed -> negative phase).
-        # When Global/SGN == +1, the phase history is conjugated relative to the processor's
-        # forward model. Without conjugating, the reconstructed image is point-mirrored
-        # across the origin. Conjugating when SGN == +1 brings it into the standard
-        # SGN = -1 convention, matching SICD Grid/Row/Sgn = -1 and Grid/Col/Sgn = -1.
+        # This SAR imaging processor assumes SGN = -1 (echo delayed -> negative phase).
+        # Conjugating when SGN == +1 matches SICD Grid/Row/Sgn = -1 and Grid/Col/Sgn = -1.
         if getattr(cphd_meta, "sgn", -1) == 1:
             sig = torch.conj(sig)
         
-        pvp = channel_pvps[i]
-        fxc = channel_fxcs[i]
-        
-        # -- NOTE (Audit C1 Remediated): Phase Rotation Removed --
-        # Previously, an inter-channel carrier phase rotation was applied here:
-        #   tau = pvp["RcvTime"] - ref_rcv_time
-        #   phase_corr = -2.0 * torch.pi * (fc_global - fxc) * tau
-        #   sig = sig * torch.exp(1j * phase_corr)
-        #
-        # Under the mistaken assumption that stepped-chirp burst channels required
-        # carrier remodulation to a global center frequency due to inter-pulse timing
-        # offsets (tau = RcvTime - ref_rcv_time).
-        #
-        # In reality, per CPHD DIDD §1.4 and §4, CPHD phase history data in the FX domain
-        # is already fully SRP-referenced and RF-frequency labeled:
-        #   phi(fx) = SGN * 2 * pi * fx * Delta_TOA
-        # The CPHD producer's compensation zeroes the SRP echo phase in every vector of
-        # every channel. No LO or carrier modulation terms survive in compliant CPHD data.
-        #
-        # When applied to multi-step data with realistic burst timing delays:
-        #   cycles = (fc_global - fxc) * tau
-        # unless 'cycles' happens to be an exact integer (as was artificially the case
-        # in early simulations with delta_tau = 150 us), this injected an uncontrolled
-        # phase offset into each subband. This destroyed subband phase alignment and
-        # collapsed coherence (from 0.999 down to 0.35 - 0.61).
-        # Real multi-step CPHD subbands are already coherent at the SRP; therefore,
-        # this rotation was spurious and has been removed.
+        # -- Phase Rotation Removed --
+        # Per CPHD DIDD §1.4 and §4, CPHD phase history data in the FX domain is already fully SRP-referenced.
+        # and RF-frequency labeled: phi(fx) = SGN * 2 * pi * fx * Delta_TOA
+        # The CPHD producer's compensation zeroes the SRP echo phase in every vector of every channel. 
+        # No LO or carrier modulation terms survive in compliant CPHD data.
+        # Supposedly... 
 
         # -- 3.3) CZT-NUFFT PFA EACH CHANNEL (WITH ON-DEMAND OOM RECOVERY) --
-        
+
+        N_samples = sig.shape[-1]
+
+
+        k_start = Kr_list[i][:, 0].unsqueeze(1)
+        k_step = ((Kr_list[i][:, -1] - Kr_list[i][:, 0]) / max(N_samples - 1, 1)).unsqueeze(1)
+
         try:
-            grid_2d = process_cztnufft(
-                signal=sig,
-                fxc=fxc,
-                pvp=pvp,
-                Ku = Ku_list[i],
-                Kr = Kr_list[i],
-                N_u=N_u, 
-                N_r=N_r,
-                L_u=L_u,
-                L_r=L_r,
-                k_ctr_u=gku_ctr,
-                k_ctr_r=gkr_ctr,
-                batch_size=batch_size,
-                device=device
+            fast_resampled = batch_czt_range(
+                    sig,
+                    k_start=k_start,
+                    k_step=k_step,
+                    M_out=N_r,
+                    k_out_start=k_out_start_r,
+                    k_out_step=k_out_step_r,
+                    spatial_extent=L_r,
+                    batch_size=batch_size,
             )
         except torch.cuda.OutOfMemoryError:
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
-            grid_2d = process_cztnufft(
-                signal=sig,
-                fxc=fxc,
-                pvp=pvp,
-                Ku = Ku_list[i],
-                Kr = Kr_list[i],
-                N_u=N_u, 
-                N_r=N_r,
-                L_u=L_u,
-                L_r=L_r,
-                k_ctr_u=gku_ctr,
-                k_ctr_r=gkr_ctr,
+            fast_resampled = batch_czt_range(
+                    sig,
+                    k_start=k_start,
+                    k_step=k_step,
+                    M_out=N_r,
+                    k_out_start=k_out_start_r,
+                    k_out_step=k_out_step_r,
+                    spatial_extent=L_r,
+                    batch_size=batch_size,
+            )
+        
+        cot_theta = Ku_list[i][:, N_samples//2] / Kr_list[i][:, N_samples//2]
+   
+        try:
+            grid_2d = nufft_grid_1d(
+                signal=fast_resampled,
+                kx=(cot_theta, Kr_cart),
+                grid_size=N_u,
+                L_x=L_u,
+                k_center=gku_ctr,
                 batch_size=batch_size,
-                device=device
+            )
+        except torch.cuda.OutOfMemoryError:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            grid_2d = nufft_grid_1d(
+                signal=fast_resampled,
+                kx=(cot_theta, Kr_cart),
+                grid_size=N_u,
+                L_x=L_u,
+                k_center=k_ctr_u,
+                batch_size=batch_size,
             )
         
         # -- 3.4) ADD THIS CHANNEL'S KSPACE TO GLOBAL KSPACE --
@@ -336,7 +350,7 @@ def pfa_per_polar(
     }
 
     return PFAResult(
-        (img_out, bw_range, bw_azm, N_range, N_azm, is_rotated_dataset),
+        (img_out, bw_range, bw_azm, N_range, N_azm, False),
         kspace_bounds=kspace_bounds,
         kctr_dict=kctr_dict,
         dr_range=dr_range,

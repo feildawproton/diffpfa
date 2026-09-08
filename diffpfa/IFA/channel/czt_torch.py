@@ -1,17 +1,16 @@
 import math
 import torch
 
-def czt_1d_torch(
+def _czt_range(
     x: torch.Tensor,
     M: int,
     r_min: float,
     r_max: float,
     k_step: torch.Tensor,
     k_start: torch.Tensor,
-    dim: int = -1
 ) -> torch.Tensor:
     """
-    Computes 1D Chirp Z-Transform (CZT) along a specified dimension in PyTorch.
+    Computes 1D Chirp Z-Transform (CZT) along the range dimension.
     Evaluates sum_n x[n] * exp(j * 2pi * r_m * (k_start + n * k_step))
     where r_m linearly spaces from r_min to r_max with M points.
 
@@ -22,48 +21,40 @@ def czt_1d_torch(
         r_max: Maximum evaluation spatial coordinate (e.g., meters).
         k_step: Spatial frequency step per sample (cycles/unit). Tensor broadcastable to x.
         k_start: Starting spatial frequency (cycles/unit). Tensor broadcastable to x.
-        dim: Dimension along which to compute CZT (default -1).
 
     Returns:
         Complex tensor with size M along dimension `dim`.
     """
-    if dim < 0:
-        dim += x.ndim
-
-    N = x.shape[dim]
+    
+    N = x.shape[1]
     dr = (r_max - r_min) / max(M - 1, 1)
 
     device = x.device
 
-    # -- NOTE (Audit C9 / F13 Remediated): Pin Float64 Precision in CZT --
-    # Pre- and post-chirp phases evaluate 2*pi*r_min*k where r_min ~ -L/2 ~ -2500m
-    # and k ~ 64 cyc/m, resulting in absolute phases around ~1e6 rad.
-    # Evaluating phases in float32 limits precision to ~0.06 rad (~3.4 degrees) of
-    # random phase noise per sample, destroying SNR by -21 dB.
+    # -- Pin Float64 Precision in CZT --
+    # Oftern, Pre- and post-chirp phases evaluate 2*pi*r_min*k where r_min ~ -L/2 ~ -2500mand k ~ 64 cyc/m, 
+    # resulting in absolute phases around ~1e6 rad.
+    # Evaluating phases in float32 limits precision to ~0.06 rad (~3.4 degrees) of random phase noise per sample, 
+    # reducing SNR by -21 dB.
     # Therefore, chirp phases and Bluestein convolution are always computed in float64/complex128.
-    calc_real_dtype = torch.float64
-    calc_cplx_dtype = torch.complex128
+    
+    x_cplx = x.to(torch.complex128)
 
-    x_cplx = x.to(calc_cplx_dtype)
+    n = torch.arange(N, dtype=torch.float64, device=device)
+    m = torch.arange(M, dtype=torch.float64, device=device)
 
-    n = torch.arange(N, dtype=calc_real_dtype, device=device)
-    m = torch.arange(M, dtype=calc_real_dtype, device=device)
-
-    # Reshape n and m to align with target dimension `dim`
+    # Reshape n and m to align with target dimension 1
     shape_n = [1] * x.ndim
-    shape_n[dim] = N
+    shape_n[1] = N
     n_exp = n.view(*shape_n)
 
     shape_m = [1] * x.ndim
-    shape_m[dim] = M
+    shape_m[1] = M
     m_exp = m.view(*shape_m)
 
     # Expand k_start and k_step to broadcast with n_exp in float64
-    k_start_exp = k_start.to(calc_real_dtype) if isinstance(k_start, torch.Tensor) else k_start
-    k_step_exp = k_step.to(calc_real_dtype) if isinstance(k_step, torch.Tensor) else k_step
-
-    pi = math.pi
-    two_pi = 2.0 * pi
+    k_start_exp = k_start.to(torch.float64) if isinstance(k_start, torch.Tensor) else k_start
+    k_step_exp = k_step.to(torch.float64) if isinstance(k_step, torch.Tensor) else k_step
 
     # We evaluate: C(r) = sum_n x[n] exp(j * 2pi * r_m * (k_start + n * k_step))
     # where r_m = r_min + m * dr.
@@ -73,55 +64,55 @@ def czt_1d_torch(
 
     # 1. Pre-chirp:
     # phase_n = 2pi * r_min * (k_start + n * k_step) + pi * dr * k_step * n^2
-    phase_n = two_pi * r_min * (k_start_exp + n_exp * k_step_exp) + pi * dr * k_step_exp * (n_exp**2)
+    phase_n = 2.0 * torch.pi * r_min * (k_start_exp + n_exp * k_step_exp) + torch.pi * dr * k_step_exp * (n_exp**2)
     pre_chirp = torch.exp(torch.complex(torch.zeros_like(phase_n), phase_n))
     
     y = x_cplx * pre_chirp
 
     # Convolution kernel length L >= N + M - 1
     L = 2 ** math.ceil(math.log2(N + M - 1))
-
+        
     # To support batching, v must broadcast over the batch dimensions if k_step is not a scalar
     # Actually, k_step might be different per pulse. We compute v with shape (..., L).
-    # Since V is computed via FFT, we compute v exactly matching y's shape (except L in `dim`).
+    # Since V is computed via FFT, we compute v exactly matching y's shape (except L in dim 1).
     
     # Evaluate phase for v: phase_v(l) = -pi * dr * k_step * l^2
     # We construct l in [0, M) and [L-N+1, L) like standard CZT.
-    l_idx = torch.zeros(L, dtype=calc_real_dtype, device=device)
+    l_idx = torch.zeros(L, dtype=torch.float64, device=device)
     if M > 0:
-        l_idx[:M] = torch.arange(M, dtype=calc_real_dtype, device=device)
+        l_idx[:M] = torch.arange(M, dtype=torch.float64, device=device)
     if N > 1:
         # For l in [-N+1, -1] -> mapped to L-N+1 to L-1
-        l_idx[L - N + 1:] = torch.arange(1, N, dtype=calc_real_dtype, device=device).flip(0)
+        l_idx[L - N + 1:] = torch.arange(1, N, dtype=torch.float64, device=device).flip(0)
 
-    # Reshape l_idx to align with dim
+    # Reshape l_idx to align with dim 1
     shape_l = [1] * x.ndim
-    shape_l[dim] = L
+    shape_l[1] = L
     l_exp = l_idx.view(*shape_l)
 
     # 2. Convolution Kernel V
-    phase_v = -pi * dr * k_step_exp * (l_exp**2)
+    phase_v = -torch.pi * dr * k_step_exp * (l_exp**2)
     v_exp = torch.exp(torch.complex(torch.zeros_like(phase_v), phase_v))
 
-    # Perform FFT convolution along `dim`
-    Y = torch.fft.fft(y, n=L, dim=dim)
-    V = torch.fft.fft(v_exp, n=L, dim=dim)
-    conv_full = torch.fft.ifft(Y * V, n=L, dim=dim)
+    # Perform FFT convolution along dim 1
+    Y = torch.fft.fft(y, n=L, dim=1)
+    V = torch.fft.fft(v_exp, n=L, dim=1)
+    conv_full = torch.fft.ifft(Y * V, n=L, dim=1)
 
-    # Slice output to M points along `dim`
+    # Slice output to M points along dim 1
     slices = [slice(None)] * x.ndim
-    slices[dim] = slice(0, M)
+    slices[1] = slice(0, M)
     conv_m = conv_full[tuple(slices)]
 
     # 3. Post-chirp phase
     # phase_m = 2pi * k_start * m * dr + pi * dr * k_step * m^2
-    phase_m = two_pi * k_start_exp * m_exp * dr + pi * dr * k_step_exp * (m_exp**2)
+    phase_m = 2.0 * torch.pi * k_start_exp * m_exp * dr + torch.pi * dr * k_step_exp * (m_exp**2)
     post_chirp = torch.exp(torch.complex(torch.zeros_like(phase_m), phase_m))
 
-    output = (conv_m * post_chirp).to(x.dtype if x.is_complex() else calc_cplx_dtype)
+    output = (conv_m * post_chirp).to(x.dtype if x.is_complex() else torch.complex128)
     return output
 
-def czt_resample_kspace_1d(
+def batch_czt_range(
     signal: torch.Tensor,
     k_start: torch.Tensor,
     k_step: torch.Tensor,
@@ -166,28 +157,26 @@ def czt_resample_kspace_1d(
             k_start_b = k_start
             k_step_b = k_step
             
-        # 1. K-space to Spatial Domain (Inverse Fourier-like)
-        spatial_b = czt_1d_torch(
+        # 1. Polar K-space to Spatial Domain (Inverse Fourier-like)
+        spatial_b = _czt_range(
             sig_b,
             M=N_spatial,
             r_min=-spatial_extent/2.0,
             r_max=spatial_extent/2.0,
             k_step=k_step_b,
             k_start=k_start_b,
-            dim=-1
         )
         
         # 2. Spatial Domain to Cartesian K-space (Fourier-like)
         spatial_conj_b = torch.conj(spatial_b)
         
-        k_cart_b = czt_1d_torch(
+        k_cart_b = _czt_range(
             spatial_conj_b,
             M=M_out,
             r_min=k_out_start,
             r_max=k_out_start + (M_out - 1) * k_out_step,
             k_step=r_step_t,
             k_start=r_start_t,
-            dim=-1
         )
         
         # -- NOTE (Audit C7 Remediated): CZT Resampler Normalization --
